@@ -1,7 +1,7 @@
 {
   "name": "knowledge-package-manager",
-  "version": "0.1.0",
-  "description": "Local CLI MVP for installable, versioned Markdown knowledge packages.",
+  "version": "2.0.0-alpha.1",
+  "description": "npm-style package manager for wiki-linked Markdown knowledge bases.",
   "type": "module",
   "files": [
     "dist",
@@ -18,8 +18,23 @@
   "engines": {
     "node": ">=20"
   },
+  "dependencies": {
+    "picomatch": "^4.0.2",
+    "remark": "^15.0.1",
+    "remark-frontmatter": "^5.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "remark-wiki-link": "^2.0.1",
+    "semver": "^7.6.3",
+    "tar": "^7.4.3",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0"
+  },
   "devDependencies": {
     "@types/node": "^20.17.6",
+    "@types/picomatch": "^4.0.0",
+    "@types/semver": "^7.7.0",
+    "@types/tar": "^6.1.13",
     "typescript": "^5.6.3",
     "vitest": "^4.1.6"
   }
