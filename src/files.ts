@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import { access, cp, lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
+import picomatch from "picomatch";
 import { toPosixPath } from "./paths.js";
 
 const INTERNAL_DIRS = new Set([".git", ".kpm", "knowledge_modules", "node_modules", "dist"]);
@@ -53,6 +54,24 @@ export async function listMarkdownFiles(
 ): Promise<string[]> {
   const files = (await walkFiles(root)).filter((path) => path.toLowerCase().endsWith(".md"));
   return files.filter((path) => matchesAny(path, include) && !matchesAny(path, exclude));
+}
+
+export type ListPackageFilesOptions = {
+  excludes?: string[];
+};
+
+const DEFAULT_PACKAGE_EXCLUDES = ["knowledge_modules/**", ".kpm/**", "node_modules/**"];
+
+export async function listPackageFiles(
+  root: string,
+  patterns: string[],
+  options: ListPackageFilesOptions = {}
+): Promise<string[]> {
+  const includes = patterns.filter((pattern) => !pattern.startsWith("!"));
+  const excludes = patterns.filter((pattern) => pattern.startsWith("!")).map((pattern) => pattern.slice(1));
+  const isIncluded = picomatch(includes.length > 0 ? includes : ["**/*.md"], { dot: false });
+  const isExcluded = picomatch([...DEFAULT_PACKAGE_EXCLUDES, ...excludes, ...(options.excludes ?? [])], { dot: true });
+  return (await walkFiles(root)).filter((path) => isIncluded(path) && !isExcluded(path)).sort();
 }
 
 export function matchesAny(path: string, patterns: string[]): boolean {
