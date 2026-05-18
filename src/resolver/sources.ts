@@ -4,28 +4,32 @@ export type PackageSource =
       owner: string;
       repo: string;
       ref: string;
+      refType: "tag" | "branch" | "sha";
       original: string;
       tarballUrl: string;
     }
   | {
       kind: "file";
       path: string;
+      ref: "";
+      refType: "sha";
       original: string;
     };
 
 export function parsePackageSource(spec: string): PackageSource {
   if (spec.startsWith("github:")) {
     const body = spec.slice("github:".length);
-    const [repoPart, ref = "main"] = splitOnce(body, "#");
+    const [repoPart, ref = "HEAD"] = splitOnce(body, "#");
     const [owner, repo, ...rest] = repoPart.split("/");
     if (!owner || !repo || rest.length > 0) {
-      throw new Error(`Invalid GitHub source "${spec}". Expected github:owner/repo#ref`);
+      throw new Error(`Invalid GitHub source "${spec}". Expected github:owner/repo[#ref]`);
     }
     return {
       kind: "github",
       owner,
       repo,
       ref,
+      refType: inferRefType(ref),
       original: spec,
       tarballUrl: `https://api.github.com/repos/${owner}/${repo}/tarball/${ref}`
     };
@@ -36,10 +40,20 @@ export function parsePackageSource(spec: string): PackageSource {
     if (!path) {
       throw new Error(`Invalid file source "${spec}". Expected file:/path/to/package`);
     }
-    return { kind: "file", path, original: spec };
+    return { kind: "file", path, ref: "", refType: "sha", original: spec };
   }
 
-  throw new Error(`Unsupported package source "${spec}". Use github:owner/repo#ref or file:/path/to/package`);
+  throw new Error(`Unsupported package source "${spec}". Use github:owner/repo[#ref] or file:/path/to/package`);
+}
+
+function inferRefType(ref: string): "tag" | "branch" | "sha" {
+  if (/^[0-9a-f]{7,40}$/i.test(ref)) {
+    return "sha";
+  }
+  if (/^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/.test(ref)) {
+    return "tag";
+  }
+  return "branch";
 }
 
 function splitOnce(value: string, separator: string): [string, string | undefined] {
