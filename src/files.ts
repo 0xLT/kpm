@@ -90,6 +90,10 @@ export async function copyDirectory(source: string, destination: string): Promis
   });
 }
 
+export async function copyDirectoryClean(source: string, destination: string): Promise<void> {
+  await copyDirectory(source, destination);
+}
+
 export async function ensureSymlink(target: string, linkPath: string): Promise<void> {
   await mkdir(dirname(linkPath), { recursive: true });
   await rm(linkPath, { recursive: true, force: true });
@@ -105,6 +109,18 @@ export async function hashDirectory(root: string): Promise<string> {
     hash.update("\0");
   }
   return `sha256-${hash.digest("hex")}`;
+}
+
+export async function canonicalContentHash(root: string): Promise<string> {
+  const hash = createHash("sha256");
+  for (const path of await walkFiles(root)) {
+    const content = await readFile(join(root, path), "utf8");
+    hash.update(path);
+    hash.update("\0");
+    hash.update(content.replace(/\r\n/g, "\n"));
+    hash.update("\0");
+  }
+  return `sha256-${hash.digest("base64")}`;
 }
 
 export async function assertDirectory(path: string): Promise<void> {
