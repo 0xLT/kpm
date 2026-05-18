@@ -1,0 +1,8 @@
+{
+  "name": "@fix/a",
+  "version": "0.1.0",
+  "type": "knowledge-package",
+  "knowledgeDependencies": {
+    "@fix/b": "file:./../file-pkg-b"
+  }
+}
