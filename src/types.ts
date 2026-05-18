@@ -1,3 +1,47 @@
+export type KnowledgeManifest = {
+  name: string;
+  version: string;
+  description?: string;
+  license?: string;
+  type: "knowledge-package";
+  files: string[];
+  entrypoint: string;
+  knowledgeDependencies: Record<string, string>;
+};
+
+export type KpmConfig = {
+  vault: string;
+  defaultCli: "claude" | "codex" | "gemini";
+  audit: { enabled: boolean };
+};
+
+export type LockfileRefType = "tag" | "branch" | "sha";
+
+export type LockfileOverriddenSpec = {
+  spec: string;
+  requestedBy: string;
+};
+
+export type LockfilePackage = {
+  version: string;
+  spec: string;
+  resolved: string;
+  ref: string;
+  refType: LockfileRefType;
+  commit: string;
+  integrity: string;
+  tarballIntegrity: string;
+  dependencies: Record<string, string>;
+  requestedBy: string[];
+  overriddenSpecs?: LockfileOverriddenSpec[];
+};
+
+export type Lockfile = {
+  lockfileVersion: 2;
+  root: { name: string; version: string };
+  packages: Record<string, LockfilePackage>;
+};
+
 export type WikiLink = {
   raw: string;
   packageName?: string;
@@ -18,31 +62,8 @@ export type ParsedNote = {
   frontmatter: Record<string, unknown>;
   headings: Heading[];
   wikilinks: WikiLink[];
-  content: string;
-};
-
-export type KnowledgeManifest = {
-  name: string;
-  version: string;
-  description?: string;
-  license?: string;
-  type: "knowledge-package";
-  exports: Record<string, string>;
-  context: {
-    entrypoints: string[];
-    include: string[];
-    exclude: string[];
-    tags: string[];
-    audience: string[];
-    requireWikilinks: boolean;
-  };
-  wikilinks: {
-    caseSensitive: boolean;
-    extensions: string[];
-    ambiguous: "error" | "first" | "warn";
-  };
-  dependencies: Record<string, string>;
-  knowledgeDependencies: Record<string, string>;
+  body: string;
+  source: string;
 };
 
 export type PackageContext = {
@@ -62,19 +83,4 @@ export type ResolvedLink = {
   status: "resolved" | "missing" | "ambiguous";
   reason?: string;
   candidates?: string[];
-};
-
-export type LinkEdge = {
-  from: string;
-  to?: string;
-  raw: string;
-  packageName: string;
-  resolved: boolean;
-  status: ResolvedLink["status"];
-  reason?: string;
-};
-
-export type Graph = {
-  nodes: Array<{ id: string; packageName: string; path: string }>;
-  edges: LinkEdge[];
 };
