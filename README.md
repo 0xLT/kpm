@@ -51,6 +51,8 @@ Source specs:
   during `kpm add` or intentional lockfile regeneration. Tags such as `v0.2.4`
   and `0.2.4` are accepted for comparison, and the highest satisfying tag is
   pinned to its commit SHA in `knowledge.lock`.
+  Quote source specs with spaces when passing them through a shell, such as
+  `kpm add 'github:owner/repo#semver:>=1.2.0 <2.0.0'`.
 - `file:/path/to/package` reads a local package directory. Transitive relative
   `file:` dependencies are resolved relative to their local `file:` parent.
 
@@ -184,8 +186,8 @@ warnings.
 `kpm pack` runs doctor, requires the entrypoint to be included by the package
 file globs, and writes `.kpm/pack/<scope>-<name>-<version>.tgz` by default. It
 also accepts `--out path`. It refuses to pack packages with mutable dependency
-refs such as `github:owner/repo#main`; use a tag or commit SHA for publishable
-packages.
+refs such as `github:owner/repo#main`; use a tag, commit SHA, or semver range
+for publishable packages.
 
 `kpm audit` is beta advisory signal only. It scans installed packages for
 unexpected file extensions and large text-like files, but it is not a security

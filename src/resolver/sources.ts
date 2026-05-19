@@ -6,7 +6,6 @@ export type PackageSource =
       ref: string;
       refType: "tag" | "branch" | "sha" | "semver";
       original: string;
-      tarballUrl: string;
     }
   | {
       kind: "file";
@@ -31,8 +30,7 @@ export function parsePackageSource(spec: string): PackageSource {
       repo,
       ref: parsedRef.ref,
       refType: parsedRef.refType,
-      original: spec,
-      tarballUrl: `https://api.github.com/repos/${owner}/${repo}/tarball/${ref}`
+      original: spec
     };
   }
 
