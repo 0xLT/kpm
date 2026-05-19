@@ -15,10 +15,10 @@ describe("compose copyAndRewrite", () => {
     return { a, b };
   }
 
-  it("rewrites explicit cross-pkg, intra-pkg bare-name, and ./ relative", async () => {
+  it("rewrites explicit cross-pkg, intra-pkg bare-name, folder path, and ./ relative", async () => {
     const project = await mkdtemp(join(tmpdir(), "kpm-compose-"));
     const { a, b } = await setupAB(project);
-    await writeFile(join(a, "README.md"), "See [[intro]], [[./sub/deep]], and [[@fix/b/start]].\n");
+    await writeFile(join(a, "README.md"), "See [[intro]], [[sub/deep]], [[./sub/deep]], and [[@fix/b/start]].\n");
     await writeFile(join(a, "intro.md"), "# Intro\n");
     await mkdir(join(a, "sub"), { recursive: true });
     await writeFile(join(a, "sub", "deep.md"), "# Deep\n");

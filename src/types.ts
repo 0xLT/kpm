@@ -65,22 +65,3 @@ export type ParsedNote = {
   body: string;
   source: string;
 };
-
-export type PackageContext = {
-  root: string;
-  manifest: KnowledgeManifest;
-  name: string;
-  version: string;
-  notes: Map<string, ParsedNote>;
-};
-
-export type ResolvedLink = {
-  raw: string;
-  from: string;
-  toPackage?: string;
-  toPath?: string;
-  toHeading?: string;
-  status: "resolved" | "missing" | "ambiguous";
-  reason?: string;
-  candidates?: string[];
-};

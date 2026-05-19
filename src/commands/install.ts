@@ -1,7 +1,7 @@
-import { readFile, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
-import { canonicalContentHash, copyDirectoryClean, fileExists, writeJsonFile } from "../files.js";
-import { parseKnowledgeManifest } from "../manifest/knowledge.js";
+import { canonicalContentHash, copyDirectory, writeJsonFile } from "../files.js";
+import { readKnowledgeManifest } from "../manifest/knowledge.js";
 import { readLockfile, writeLockfile } from "../manifest/lock.js";
 import { materializeLockfilePackage, materializeSource } from "../resolver/fetch.js";
 import { buildInstallPlan } from "../resolver/plan.js";
@@ -10,13 +10,11 @@ import { warnMutableRef } from "../resolver/warnings.js";
 import type { KnowledgeManifest, Lockfile, LockfilePackage } from "../types.js";
 
 export async function installNew(projectRoot: string, sourceSpec: string): Promise<void> {
-  const rootManifest = await readRootManifest(projectRoot);
+  const rootManifest = await readKnowledgeManifest(projectRoot);
   const source = parsePackageSource(sourceSpec);
   warnMutableRef(source, "kpm add");
   const probe = await materializeSource(source);
-  const probeManifest = parseKnowledgeManifest(
-    JSON.parse(await readFile(join(probe.rootPath, "knowledge.json"), "utf8"))
-  );
+  const probeManifest = await readKnowledgeManifest(probe.rootPath);
 
   rootManifest.knowledgeDependencies = {
     ...rootManifest.knowledgeDependencies,
@@ -29,7 +27,7 @@ export async function installNew(projectRoot: string, sourceSpec: string): Promi
 export async function installFromLockfile(projectRoot: string): Promise<void> {
   const lock = await readLockfile(projectRoot);
   if (Object.keys(lock.packages).length === 0) {
-    const rootManifest = await readRootManifest(projectRoot);
+    const rootManifest = await readKnowledgeManifest(projectRoot);
     if (Object.keys(rootManifest.knowledgeDependencies).length > 0) {
       throw new Error("knowledge.lock has no packages; run `kpm add <source>` or regenerate the lockfile intentionally.");
     }
@@ -52,9 +50,7 @@ async function reinstall(projectRoot: string, rootManifest: KnowledgeManifest): 
   };
 
   const modulesRoot = join(projectRoot, "knowledge_modules");
-  if (await fileExists(modulesRoot)) {
-    await rm(modulesRoot, { recursive: true, force: true });
-  }
+  await rm(modulesRoot, { recursive: true, force: true });
 
   for (const [name, resolved] of plan.singletons) {
     const tagVersion = resolved.refType === "tag" ? inferTagVersion(resolved.ref) : null;
@@ -64,7 +60,7 @@ async function reinstall(projectRoot: string, rootManifest: KnowledgeManifest): 
     warnMutableRef(resolved.source, "kpm install", name);
 
     const modulePath = join(modulesRoot, ...name.split("/"));
-    await copyDirectoryClean(resolved.rootPath, modulePath);
+    await copyDirectory(resolved.rootPath, modulePath);
     const integrity = await canonicalContentHash(modulePath);
     const entry: LockfilePackage = {
       version: resolved.manifest.version,
@@ -92,9 +88,7 @@ async function reinstall(projectRoot: string, rootManifest: KnowledgeManifest): 
 
 async function hydrateFromLockfile(projectRoot: string, lock: Lockfile): Promise<void> {
   const modulesRoot = join(projectRoot, "knowledge_modules");
-  if (await fileExists(modulesRoot)) {
-    await rm(modulesRoot, { recursive: true, force: true });
-  }
+  await rm(modulesRoot, { recursive: true, force: true });
 
   for (const [name, pkg] of Object.entries(lock.packages)) {
     if (pkg.refType === "branch") {
@@ -102,16 +96,12 @@ async function hydrateFromLockfile(projectRoot: string, lock: Lockfile): Promise
     }
     const materialized = await materializeLockfilePackage(pkg);
     const modulePath = join(modulesRoot, ...name.split("/"));
-    await copyDirectoryClean(materialized.rootPath, modulePath);
+    await copyDirectory(materialized.rootPath, modulePath);
     const integrity = await canonicalContentHash(modulePath);
     if (pkg.integrity && integrity !== pkg.integrity) {
       throw new Error(`${name}: lockfile integrity mismatch. Expected ${pkg.integrity}, got ${integrity}`);
     }
   }
-}
-
-async function readRootManifest(projectRoot: string): Promise<KnowledgeManifest> {
-  return parseKnowledgeManifest(JSON.parse(await readFile(join(projectRoot, "knowledge.json"), "utf8")));
 }
 
 function inferTagVersion(ref: string): string | null {

@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -25,6 +25,19 @@ describe("doctor", () => {
     );
     await writeFile(join(project, "README.md"), "# R\n\nSee [[other]].\n");
     await writeFile(join(project, "other.md"), "# Other\n");
+    const report = await doctor(project);
+    expect(report.ok).toBe(true);
+  });
+
+  it("accepts local folder/path wikilinks when the target file exists", async () => {
+    const project = await mkdtemp(join(tmpdir(), "kpm-doctor-path-"));
+    await writeFile(
+      join(project, "knowledge.json"),
+      JSON.stringify({ name: "@me/root", version: "0.1.0", type: "knowledge-package" })
+    );
+    await writeFile(join(project, "README.md"), "See [[notes/other]].\n");
+    await mkdir(join(project, "notes"), { recursive: true });
+    await writeFile(join(project, "notes", "other.md"), "# Other\n");
     const report = await doctor(project);
     expect(report.ok).toBe(true);
   });

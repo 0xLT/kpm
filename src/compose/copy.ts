@@ -1,23 +1,22 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { dirname, join, posix } from "node:path";
-import { fileExists, listPackageFiles } from "../files.js";
-import { parseKnowledgeManifest } from "../manifest/knowledge.js";
+import { dirname, join } from "node:path";
+import { fileExists, listInstalledPackageRoots, listPackageFiles } from "../files.js";
+import { readKnowledgeManifest } from "../manifest/knowledge.js";
+import { createLinkablePackage, resolveWikiLink, type LinkablePackage } from "../markdown/resolve.js";
 import { rewriteWikiLinks } from "../markdown/wikilinks.js";
 import type { WikiLink } from "../types.js";
 
-type IndexedPackage = {
-  name: string;
-  files: Set<string>;
+type IndexedPackage = LinkablePackage & {
   root: string;
 };
 
 export async function copyAndRewrite(projectRoot: string, vault: string): Promise<void> {
-  const modulesRoot = join(projectRoot, "knowledge_modules");
-  if (!(await fileExists(modulesRoot))) {
+  const indexed = await indexInstalledPackages(projectRoot);
+  if (indexed.length === 0) {
     return;
   }
 
-  const indexed = await indexInstalledPackages(modulesRoot);
+  const packageMap = new Map<string, LinkablePackage>(indexed.map((pkg) => [pkg.name, pkg]));
   const errors: string[] = [];
 
   for (const pkg of indexed) {
@@ -29,7 +28,7 @@ export async function copyAndRewrite(projectRoot: string, vault: string): Promis
       const destPath = join(packageDestRoot, file);
       const content = await readFile(sourcePath, "utf8");
       const rewritten = file.endsWith(".md")
-        ? rewriteWikiLinks(content, (link) => resolveStrict(pkg, file, link, indexed, errors))
+        ? rewriteWikiLinks(content, (link) => resolveStrict(pkg, file, link, packageMap, errors))
         : content;
       await mkdir(dirname(destPath), { recursive: true });
       await writeFile(destPath, rewritten);
@@ -47,25 +46,12 @@ export async function copyAndRewrite(projectRoot: string, vault: string): Promis
   }
 }
 
-async function indexInstalledPackages(modulesRoot: string): Promise<IndexedPackage[]> {
-  const packageRoots: string[] = [];
-  for (const entry of await readdir(modulesRoot, { withFileTypes: true })) {
-    if (entry.name.startsWith("@") && entry.isDirectory()) {
-      for (const scoped of await readdir(join(modulesRoot, entry.name), { withFileTypes: true })) {
-        if (scoped.isDirectory()) {
-          packageRoots.push(join(modulesRoot, entry.name, scoped.name));
-        }
-      }
-    } else if (entry.isDirectory()) {
-      packageRoots.push(join(modulesRoot, entry.name));
-    }
-  }
-
+async function indexInstalledPackages(projectRoot: string): Promise<IndexedPackage[]> {
   const indexed: IndexedPackage[] = [];
-  for (const root of packageRoots) {
-    const manifest = parseKnowledgeManifest(JSON.parse(await readFile(join(root, "knowledge.json"), "utf8")));
+  for (const root of await listInstalledPackageRoots(projectRoot)) {
+    const manifest = await readKnowledgeManifest(root);
     const files = await listPackageFiles(root, manifest.files);
-    indexed.push({ name: manifest.name, files: new Set(files), root });
+    indexed.push({ ...createLinkablePackage(manifest.name, files), root });
   }
   return indexed;
 }
@@ -74,53 +60,15 @@ function resolveStrict(
   current: IndexedPackage,
   fromFile: string,
   link: WikiLink,
-  indexed: IndexedPackage[],
+  packages: Map<string, LinkablePackage>,
   errors: string[]
 ): string | undefined {
-  if (link.packageName) {
-    const pkg = indexed.find((entry) => entry.name === link.packageName);
-    if (!pkg) {
-      errors.push(`${current.name}/${fromFile}: ${link.raw} -> package ${link.packageName} not installed`);
-      return undefined;
-    }
-    const file = withMdExt(link.target);
-    if (!pkg.files.has(file)) {
-      errors.push(`${current.name}/${fromFile}: ${link.raw} -> ${link.packageName} has no file ${file}`);
-      return undefined;
-    }
-    return `${pkg.name}/${stripMdExt(file)}`;
-  }
-
-  if (link.target.startsWith("./") || link.target.startsWith("../")) {
-    const fromDir = posix.dirname(toPosix(fromFile));
-    const resolved = posix.normalize(posix.join(fromDir, link.target));
-    const candidate = withMdExt(resolved);
-    if (!current.files.has(candidate)) {
-      errors.push(`${current.name}/${fromFile}: ${link.raw} -> no file at ${candidate}`);
-      return undefined;
-    }
-    return `${current.name}/${stripMdExt(candidate)}`;
-  }
-
-  const slug = link.target.toLowerCase();
-  const matches: string[] = [];
-  for (const candidate of current.files) {
-    if (!candidate.endsWith(".md")) {
-      continue;
-    }
-    if (posix.basename(candidate, ".md").toLowerCase() === slug) {
-      matches.push(candidate);
-    }
-  }
-  if (matches.length === 0) {
-    errors.push(`${current.name}/${fromFile}: ${link.raw} -> no file matches "${link.target}" inside ${current.name}`);
+  const resolved = resolveWikiLink(current, fromFile, link, packages);
+  if (!resolved.ok) {
+    errors.push(resolved.message);
     return undefined;
   }
-  if (matches.length > 1) {
-    errors.push(`${current.name}/${fromFile}: ${link.raw} -> ambiguous, matches: ${matches.join(", ")}`);
-    return undefined;
-  }
-  return `${current.name}/${stripMdExt(matches[0])}`;
+  return resolved.target;
 }
 
 async function pruneStalePackageDirs(vaultRoot: string, indexed: IndexedPackage[]): Promise<void> {
@@ -142,16 +90,4 @@ async function pruneStalePackageDirs(vaultRoot: string, indexed: IndexedPackage[
       }
     }
   }
-}
-
-function withMdExt(path: string): string {
-  return path.endsWith(".md") ? path : `${path}.md`;
-}
-
-function stripMdExt(path: string): string {
-  return path.replace(/\.md$/i, "");
-}
-
-function toPosix(path: string): string {
-  return path.replace(/\\/g, "/");
 }

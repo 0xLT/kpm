@@ -1,9 +1,8 @@
-import { readFile, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { copyAndRewrite } from "../compose/copy.js";
 import { runBridge } from "../compose/bridge.js";
-import { fileExists } from "../files.js";
-import { parseKpmConfig } from "../manifest/config.js";
+import { readKpmConfig } from "../manifest/config.js";
 import { readLockfile } from "../manifest/lock.js";
 
 export type ComposeOptions = {
@@ -15,13 +14,10 @@ export type ComposeOptions = {
 
 export async function compose(projectRoot: string, options: ComposeOptions = {}): Promise<void> {
   const log = options.log ?? ((line: string) => process.stdout.write(`${line}\n`));
-  const configPath = join(projectRoot, "kpm.config.json");
-  const cfg = (await fileExists(configPath))
-    ? parseKpmConfig(JSON.parse(await readFile(configPath, "utf8")))
-    : parseKpmConfig({});
+  const cfg = await readKpmConfig(projectRoot);
   const vaultPath = join(projectRoot, cfg.vault);
 
-  if (options.fresh && (await fileExists(vaultPath))) {
+  if (options.fresh) {
     await rm(vaultPath, { recursive: true, force: true });
   }
 

@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { dirname, join, resolve as resolvePath } from "node:path";
-import { parseKnowledgeManifest } from "../manifest/knowledge.js";
+import { resolve as resolvePath } from "node:path";
+import { readKnowledgeManifest } from "../manifest/knowledge.js";
 import type { KnowledgeManifest, LockfileRefType } from "../types.js";
 import { materializeSource } from "./fetch.js";
 import { parsePackageSource, type PackageSource } from "./sources.js";
@@ -45,9 +44,7 @@ export async function buildInstallPlan(initial: DependencyRequest[]): Promise<In
 
     const source = parsePackageSource(request.source);
     const materialized = await materializeSource(source);
-    const manifest = parseKnowledgeManifest(
-      JSON.parse(await readFile(join(materialized.rootPath, "knowledge.json"), "utf8"))
-    );
+    const manifest = await readKnowledgeManifest(materialized.rootPath);
     materializedBySpec.set(sourceKey, {
       source,
       rootPath: materialized.rootPath,

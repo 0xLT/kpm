@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { constants } from "node:fs";
-import { access, cp, lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { constants, type Dirent } from "node:fs";
+import { access, cp, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import picomatch from "picomatch";
 import { toPosixPath } from "./paths.js";
@@ -16,6 +16,10 @@ export async function fileExists(path: string): Promise<boolean> {
   }
 }
 
+export function isFileNotFoundError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+}
+
 export async function readJsonFile(path: string): Promise<unknown> {
   return JSON.parse(await readFile(path, "utf8"));
 }
@@ -25,35 +29,32 @@ export async function writeJsonFile(path: string, value: unknown): Promise<void>
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
-export async function walkFiles(root: string): Promise<string[]> {
+export type WalkFilesOptions = {
+  prune?: string[];
+};
+
+export async function walkFiles(root: string, options: WalkFilesOptions = {}): Promise<string[]> {
   const found: string[] = [];
+  const shouldPrune = options.prune?.length ? picomatch(options.prune, { dot: true }) : undefined;
 
   async function visit(absDir: string) {
     const entries = await readdir(absDir, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isDirectory() && INTERNAL_DIRS.has(entry.name)) {
+      const abs = join(absDir, entry.name);
+      const path = toPosixPath(relative(root, abs));
+      if (entry.isDirectory() && (INTERNAL_DIRS.has(entry.name) || shouldPrune?.(path))) {
         continue;
       }
-      const abs = join(absDir, entry.name);
       if (entry.isDirectory()) {
         await visit(abs);
       } else if (entry.isFile()) {
-        found.push(toPosixPath(relative(root, abs)));
+        found.push(path);
       }
     }
   }
 
   await visit(root);
   return found.sort();
-}
-
-export async function listMarkdownFiles(
-  root: string,
-  include: string[] = ["**/*.md"],
-  exclude: string[] = []
-): Promise<string[]> {
-  const files = (await walkFiles(root)).filter((path) => path.toLowerCase().endsWith(".md"));
-  return files.filter((path) => matchesAny(path, include) && !matchesAny(path, exclude));
 }
 
 export type ListPackageFilesOptions = {
@@ -69,35 +70,35 @@ export async function listPackageFiles(
 ): Promise<string[]> {
   const includes = patterns.filter((pattern) => !pattern.startsWith("!"));
   const excludes = patterns.filter((pattern) => pattern.startsWith("!")).map((pattern) => pattern.slice(1));
+  const allExcludes = [...DEFAULT_PACKAGE_EXCLUDES, ...excludes, ...(options.excludes ?? [])];
   const isIncluded = picomatch(includes.length > 0 ? includes : ["**/*.md"], { dot: false });
-  const isExcluded = picomatch([...DEFAULT_PACKAGE_EXCLUDES, ...excludes, ...(options.excludes ?? [])], { dot: true });
-  return (await walkFiles(root)).filter((path) => isIncluded(path) && !isExcluded(path)).sort();
+  const isExcluded = picomatch(allExcludes, { dot: true });
+  return (await walkFiles(root, { prune: allExcludes })).filter((path) => isIncluded(path) && !isExcluded(path)).sort();
 }
 
-export function matchesAny(path: string, patterns: string[]): boolean {
-  return patterns.some((pattern) => matchesPattern(path, pattern));
+export async function listInstalledPackageRoots(projectRoot: string): Promise<string[]> {
+  const modulesRoot = join(projectRoot, "knowledge_modules");
+  if (!(await fileExists(modulesRoot))) {
+    return [];
+  }
+
+  const packageRoots: string[] = [];
+  for (const entry of await readdir(modulesRoot, { withFileTypes: true })) {
+    if (entry.name.startsWith("@") && isDirectoryLike(entry)) {
+      for (const scoped of await readdir(join(modulesRoot, entry.name), { withFileTypes: true })) {
+        if (isDirectoryLike(scoped)) {
+          packageRoots.push(join(modulesRoot, entry.name, scoped.name));
+        }
+      }
+    } else if (isDirectoryLike(entry)) {
+      packageRoots.push(join(modulesRoot, entry.name));
+    }
+  }
+  return packageRoots.sort();
 }
 
-export function matchesPattern(path: string, pattern: string): boolean {
-  const normalizedPattern = pattern.replace(/^\.\/+/, "");
-  if (normalizedPattern === "**/*.md") {
-    return path.toLowerCase().endsWith(".md");
-  }
-  if (normalizedPattern.endsWith("/**")) {
-    const prefix = normalizedPattern.slice(0, -3);
-    return path === prefix || path.startsWith(`${prefix}/`);
-  }
-  if (!normalizedPattern.includes("*")) {
-    return path === normalizedPattern;
-  }
-  const regex = new RegExp(
-    `^${escapeRegex(normalizedPattern).replace(/\\\*\\\*/g, ".*").replace(/\\\*/g, "[^/]*")}$`
-  );
-  return regex.test(path);
-}
-
-function escapeRegex(value: string): string {
-  return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+function isDirectoryLike(entry: Dirent): boolean {
+  return entry.isDirectory() || entry.isSymbolicLink();
 }
 
 export async function copyDirectory(source: string, destination: string): Promise<void> {
@@ -107,27 +108,6 @@ export async function copyDirectory(source: string, destination: string): Promis
     recursive: true,
     filter: (path) => !path.split("/").some((part) => INTERNAL_DIRS.has(part))
   });
-}
-
-export async function copyDirectoryClean(source: string, destination: string): Promise<void> {
-  await copyDirectory(source, destination);
-}
-
-export async function ensureSymlink(target: string, linkPath: string): Promise<void> {
-  await mkdir(dirname(linkPath), { recursive: true });
-  await rm(linkPath, { recursive: true, force: true });
-  await symlink(target, linkPath, "dir");
-}
-
-export async function hashDirectory(root: string): Promise<string> {
-  const hash = createHash("sha256");
-  for (const path of await walkFiles(root)) {
-    hash.update(path);
-    hash.update("\0");
-    hash.update(await readFile(join(root, path)));
-    hash.update("\0");
-  }
-  return `sha256-${hash.digest("hex")}`;
 }
 
 export async function canonicalContentHash(root: string): Promise<string> {

@@ -1,7 +1,7 @@
 import { relative, resolve, sep } from "node:path";
 
 export function toPosixPath(path: string): string {
-  return path.split(sep).join("/");
+  return path.replace(/\\/g, "/").split(sep).join("/");
 }
 
 export function normalizePackagePath(path: string): string {

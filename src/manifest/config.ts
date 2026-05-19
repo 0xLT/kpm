@@ -1,5 +1,7 @@
-import type { KpmConfig } from "../types.js";
+import { join } from "node:path";
+import { isFileNotFoundError, readJsonFile } from "../files.js";
 import { isSafeRelativePath } from "../paths.js";
+import type { KpmConfig } from "../types.js";
 
 const ALLOWED_CLIS = new Set<KpmConfig["defaultCli"]>(["claude", "codex", "gemini"]);
 
@@ -21,6 +23,17 @@ export function parseKpmConfig(raw: unknown): KpmConfig {
     defaultCli: cli as KpmConfig["defaultCli"],
     audit: { enabled: auditRaw.enabled === true }
   };
+}
+
+export async function readKpmConfig(root: string): Promise<KpmConfig> {
+  const path = join(root, "kpm.config.json");
+  const raw = await readJsonFile(path).catch((error: unknown) => {
+    if (isFileNotFoundError(error)) {
+      return {};
+    }
+    throw error;
+  });
+  return parseKpmConfig(raw);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

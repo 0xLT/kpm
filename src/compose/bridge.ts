@@ -1,14 +1,14 @@
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
-import { mkdir, readFile, readdir } from "node:fs/promises";
+import { mkdir, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import "./adapters/claude.js";
 import "./adapters/codex.js";
 import "./adapters/gemini.js";
 import { fileExists } from "../files.js";
-import { parseKpmConfig } from "../manifest/config.js";
+import { readKpmConfig } from "../manifest/config.js";
 import { getAdapter } from "./adapters/base.js";
-import { isKpmGenerated, readBridgeSources } from "./marker.js";
+import { readGeneratedMarker } from "./marker.js";
 
 const BRIDGE_TEMPLATE = `You are bridging multiple knowledge packages composed into the Obsidian-openable vault at "{{vault}}".
 
@@ -64,16 +64,13 @@ export function buildBridgePrompt(input: BridgePromptInputs): string {
 }
 
 export async function runBridge(projectRoot: string, options: BridgeOptions): Promise<void> {
-  const cfg = (await fileExists(join(projectRoot, "kpm.config.json")))
-    ? parseKpmConfig(JSON.parse(await readFile(join(projectRoot, "kpm.config.json"), "utf8")))
-    : parseKpmConfig({});
+  const cfg = await readKpmConfig(projectRoot);
   const cliName = options.cli ?? cfg.defaultCli;
   const adapter = getAdapter(cliName);
   const vaultPath = join(projectRoot, cfg.vault);
   await mkdir(vaultPath, { recursive: true });
 
-  await assertGeneratableTargets(vaultPath);
-  const alreadyBridged = await collectExistingBridges(vaultPath);
+  const alreadyBridged = await inspectGeneratableTargets(vaultPath);
   const prompt = buildBridgePrompt({
     vault: cfg.vault,
     packages: options.packages,
@@ -90,52 +87,42 @@ export async function runBridge(projectRoot: string, options: BridgeOptions): Pr
   await run(adapter.command, adapter.args(ctx), { cwd: vaultPath, stdin, logPath });
 
   const indexPath = join(vaultPath, "index.md");
-  if (!(await fileExists(indexPath))) {
+  const indexMarker = await readGeneratedMarker(indexPath);
+  if (!indexMarker) {
     throw new Error(`bridge failed: adapter exited 0 but ${indexPath} was not created. See ${logPath}.`);
   }
-  if (!(await isKpmGenerated(indexPath))) {
+  if (!indexMarker.isGenerated) {
     throw new Error(`bridge failed: ${indexPath} exists but lacks kpm-generated: true frontmatter. See ${logPath}.`);
   }
 }
 
-async function assertGeneratableTargets(vaultPath: string): Promise<void> {
+async function inspectGeneratableTargets(vaultPath: string): Promise<Array<{ sources: string[]; file: string }>> {
   const indexPath = join(vaultPath, "index.md");
-  if ((await fileExists(indexPath)) && !(await isKpmGenerated(indexPath))) {
+  const indexMarker = await readGeneratedMarker(indexPath);
+  if (indexMarker && !indexMarker.isGenerated) {
     throw new Error(`${indexPath} is user-authored (no kpm-generated marker). Rename or delete it to allow kpm to regenerate.`);
   }
 
   const bridgesDir = join(vaultPath, "bridges");
   if (!(await fileExists(bridgesDir))) {
-    return;
+    return [];
   }
+
+  const alreadyBridged: Array<{ sources: string[]; file: string }> = [];
   for (const entry of await readdir(bridgesDir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith(".md")) {
       continue;
     }
     const path = join(bridgesDir, entry.name);
-    if (!(await isKpmGenerated(path))) {
+    const marker = await readGeneratedMarker(path);
+    if (!marker?.isGenerated) {
       throw new Error(`${path} is user-authored (no kpm-generated marker). Rename or delete it to allow kpm to regenerate.`);
     }
-  }
-}
-
-async function collectExistingBridges(vaultPath: string): Promise<Array<{ sources: string[]; file: string }>> {
-  const bridgesDir = join(vaultPath, "bridges");
-  if (!(await fileExists(bridgesDir))) {
-    return [];
-  }
-
-  const result: Array<{ sources: string[]; file: string }> = [];
-  for (const entry of await readdir(bridgesDir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith(".md")) {
-      continue;
-    }
-    const sources = await readBridgeSources(join(bridgesDir, entry.name));
-    if (sources && sources.length > 0) {
-      result.push({ sources, file: `bridges/${entry.name}` });
+    if (marker.sources.length > 0) {
+      alreadyBridged.push({ sources: marker.sources, file: `bridges/${entry.name}` });
     }
   }
-  return result;
+  return alreadyBridged;
 }
 
 async function defaultRunProcess(

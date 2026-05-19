@@ -1,19 +1,17 @@
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { c as tarCreate } from "tar";
-import { fileExists, listPackageFiles } from "../files.js";
-import { parseKpmConfig } from "../manifest/config.js";
-import { parseKnowledgeManifest } from "../manifest/knowledge.js";
+import { listPackageFiles } from "../files.js";
+import { readKpmConfig } from "../manifest/config.js";
+import { readKnowledgeManifest } from "../manifest/knowledge.js";
 import { parsePackageSource } from "../resolver/sources.js";
 import { doctor } from "./doctor.js";
 
 export type PackOptions = { out?: string };
 
 export async function packPackage(packageRoot: string, options: PackOptions = {}): Promise<string> {
-  const manifest = parseKnowledgeManifest(JSON.parse(await readFile(join(packageRoot, "knowledge.json"), "utf8")));
-  const cfg = (await fileExists(join(packageRoot, "kpm.config.json")))
-    ? parseKpmConfig(JSON.parse(await readFile(join(packageRoot, "kpm.config.json"), "utf8")))
-    : parseKpmConfig({});
+  const manifest = await readKnowledgeManifest(packageRoot);
+  const cfg = await readKpmConfig(packageRoot);
 
   for (const [depName, spec] of Object.entries(manifest.knowledgeDependencies)) {
     const source = parsePackageSource(spec);

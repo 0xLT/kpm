@@ -1,5 +1,7 @@
-import type { KnowledgeManifest } from "../types.js";
+import { join } from "node:path";
+import { readJsonFile } from "../files.js";
 import { isSafeRelativePath } from "../paths.js";
+import type { KnowledgeManifest } from "../types.js";
 
 const NAME_RE = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
 const VERSION_RE = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
@@ -24,6 +26,10 @@ export function parseKnowledgeManifest(raw: unknown): KnowledgeManifest {
     throw new Error(`Invalid knowledge.json:\n${result.errors.join("\n")}`);
   }
   return result.manifest;
+}
+
+export async function readKnowledgeManifest(root: string): Promise<KnowledgeManifest> {
+  return parseKnowledgeManifest(await readJsonFile(join(root, "knowledge.json")));
 }
 
 export function validateKnowledgeManifest(raw: unknown): ValidationResult {
