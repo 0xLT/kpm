@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import semver from "semver";
 import { x as tarExtract } from "tar";
 import { assertDirectory } from "../files.js";
 import { isPathInside } from "../paths.js";
@@ -9,6 +10,10 @@ import type { LockfilePackage, LockfileRefType } from "../types.js";
 import type { PackageSource } from "./sources.js";
 
 const USER_AGENT = "kpm/2";
+
+export type GitHubTag = {
+  name: string;
+};
 
 export type MaterializedSource = {
   rootPath: string;
@@ -42,9 +47,20 @@ export async function materializeFileSource(source: Extract<PackageSource, { kin
 export async function materializeGithubSource(
   source: Extract<PackageSource, { kind: "github" }>
 ): Promise<MaterializedSource> {
-  const commit = await resolveGithubCommit(source);
+  let ref = source.ref;
+  let refType: LockfileRefType = source.refType === "semver" ? "tag" : source.refType;
+  if (source.refType === "semver") {
+    const tags = await listGithubTags(source.owner, source.repo);
+    ref = resolveHighestMatchingSemverTag(tags, source.ref, source.original);
+    refType = "tag";
+  }
+
+  const commit =
+    source.refType === "sha" && source.ref.length === 40
+      ? source.ref
+      : await resolveGithubCommit(source.owner, source.repo, ref, source.original);
   const resolvedUrl = `https://api.github.com/repos/${source.owner}/${source.repo}/tarball/${commit}`;
-  const bytes = await fetchBytes(resolvedUrl);
+  const bytes = await fetchTarballBytes(resolvedUrl);
   const tarballIntegrity = hashBytes(bytes);
   await writeCachedTarball(tarballIntegrity, bytes);
 
@@ -57,8 +73,8 @@ export async function materializeGithubSource(
   return {
     rootPath,
     resolvedUrl,
-    ref: source.ref,
-    refType: source.refType,
+    ref,
+    refType,
     commit,
     tarballIntegrity
   };
@@ -78,7 +94,7 @@ export async function materializeLockfilePackage(pkg: LockfilePackage): Promise<
     };
   }
 
-  const bytes = await fetchBytes(pkg.resolved);
+  const bytes = await fetchTarballBytes(pkg.resolved);
   const actual = hashBytes(bytes);
   if (pkg.tarballIntegrity && actual !== pkg.tarballIntegrity) {
     throw new Error(`lockfile tarball integrity mismatch for ${pkg.resolved}: expected ${pkg.tarballIntegrity}, got ${actual}`);
@@ -143,34 +159,111 @@ function assertSafeTarEntry(dest: string, entryPath: string, mustStayInside?: st
   }
 }
 
-async function resolveGithubCommit(source: Extract<PackageSource, { kind: "github" }>): Promise<string> {
-  if (source.refType === "sha" && source.ref.length === 40) {
-    return source.ref;
+export async function listGithubTags(
+  owner: string,
+  repo: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<GitHubTag[]> {
+  let url: string | undefined = `https://api.github.com/repos/${owner}/${repo}/tags?per_page=100`;
+  const tags: GitHubTag[] = [];
+
+  while (url) {
+    const response = await fetchImpl(url, {
+      headers: {
+        "user-agent": USER_AGENT,
+        accept: "application/vnd.github+json"
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to list GitHub tags for ${owner}/${repo}: GitHub returned ${response.status}`);
+    }
+
+    const body = (await response.json()) as unknown;
+    if (!Array.isArray(body)) {
+      throw new Error(`Failed to list GitHub tags for ${owner}/${repo}: GitHub response was not an array`);
+    }
+    for (const entry of body) {
+      if (typeof entry === "object" && entry !== null && typeof (entry as { name?: unknown }).name === "string") {
+        tags.push({ name: (entry as { name: string }).name });
+      }
+    }
+    url = nextLink(response.headers.get("link"));
   }
 
-  const url = `https://api.github.com/repos/${source.owner}/${source.repo}/commits/${source.ref}`;
-  const response = await fetch(url, {
+  return tags;
+}
+
+export function resolveHighestMatchingSemverTag(tags: GitHubTag[], range: string, sourceLabel: string): string {
+  const candidates: { tag: string; version: string }[] = [];
+  for (const tag of tags) {
+    const version = semver.valid(tag.name.replace(/^v/, ""));
+    if (version) {
+      candidates.push({ tag: tag.name, version });
+    }
+  }
+
+  let match: string | null;
+  try {
+    match = semver.maxSatisfying(
+      candidates.map((candidate) => candidate.version),
+      range
+    );
+  } catch (error) {
+    throw new Error(
+      `Invalid semver range "${range}" for ${sourceLabel}: ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+
+  if (!match) {
+    throw new Error(`No GitHub tag satisfies semver range "${range}" for ${sourceLabel}`);
+  }
+
+  return candidates.find((candidate) => candidate.version === match)!.tag;
+}
+
+export async function resolveGithubCommit(
+  owner: string,
+  repo: string,
+  ref: string,
+  sourceLabel: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<string> {
+  const url = `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`;
+  const response = await fetchImpl(url, {
     headers: {
       "user-agent": USER_AGENT,
       accept: "application/vnd.github+json"
     }
   });
   if (!response.ok) {
-    throw new Error(`Failed to resolve ${source.original}: GitHub returned ${response.status}`);
+    throw new Error(`Failed to resolve ${sourceLabel}: GitHub returned ${response.status}`);
   }
   const body = (await response.json()) as { sha?: unknown };
   if (typeof body.sha !== "string" || body.sha.length < 7) {
-    throw new Error(`Failed to resolve ${source.original}: GitHub response did not include a commit sha`);
+    throw new Error(`Failed to resolve ${sourceLabel}: GitHub response did not include a commit sha`);
   }
   return body.sha;
 }
 
-async function fetchBytes(url: string): Promise<Buffer> {
-  const response = await fetch(url, { headers: { "user-agent": USER_AGENT } });
+export async function fetchTarballBytes(url: string, fetchImpl: typeof fetch = fetch): Promise<Buffer> {
+  const response = await fetchImpl(url, { headers: { "user-agent": USER_AGENT } });
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.status}`);
   }
   return Buffer.from(await response.arrayBuffer());
+}
+
+function nextLink(linkHeader: string | null): string | undefined {
+  if (!linkHeader) {
+    return undefined;
+  }
+  for (const part of linkHeader.split(",")) {
+    const match = part.match(/<([^>]+)>;\s*rel="next"/);
+    if (match) {
+      return match[1];
+    }
+  }
+  return undefined;
 }
 
 function hashBytes(bytes: Buffer): string {
