@@ -29,7 +29,7 @@ export async function main(argv = process.argv.slice(2), ctx: CommandContext = d
       case "add": {
         const source = firstPositional(args);
         if (!source) {
-          throw new Error("Usage: kpm add github:owner/repo[#ref] | file:/path/to/package");
+          throw new Error("Usage: kpm add github:owner/repo[#ref|#semver:<range>] | file:/path/to/package");
         }
         await installNew(ctx.cwd, source);
         ctx.stdout.write(`Added ${source}\n`);
@@ -101,7 +101,7 @@ function helpText(): string {
 
 Usage:
   kpm init [--name @scope/project]
-  kpm add github:owner/repo[#ref] | file:/path/to/package
+  kpm add github:owner/repo[#ref|#semver:<range>] | file:/path/to/package
   kpm install
   kpm compose [--fresh] [--no-bridge] [--cli claude|codex|gemini]
   kpm pack [--out path]

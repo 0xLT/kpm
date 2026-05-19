@@ -4,9 +4,8 @@ export type PackageSource =
       owner: string;
       repo: string;
       ref: string;
-      refType: "tag" | "branch" | "sha";
+      refType: "tag" | "branch" | "sha" | "semver";
       original: string;
-      tarballUrl: string;
     }
   | {
       kind: "file";
@@ -24,14 +23,14 @@ export function parsePackageSource(spec: string): PackageSource {
     if (!owner || !repo || rest.length > 0) {
       throw new Error(`Invalid GitHub source "${spec}". Expected github:owner/repo[#ref]`);
     }
+    const parsedRef = parseGithubRef(ref);
     return {
       kind: "github",
       owner,
       repo,
-      ref,
-      refType: inferRefType(ref),
-      original: spec,
-      tarballUrl: `https://api.github.com/repos/${owner}/${repo}/tarball/${ref}`
+      ref: parsedRef.ref,
+      refType: parsedRef.refType,
+      original: spec
     };
   }
 
@@ -44,6 +43,17 @@ export function parsePackageSource(spec: string): PackageSource {
   }
 
   throw new Error(`Unsupported package source "${spec}". Use github:owner/repo[#ref] or file:/path/to/package`);
+}
+
+function parseGithubRef(ref: string): { ref: string; refType: "tag" | "branch" | "sha" | "semver" } {
+  if (ref.startsWith("semver:")) {
+    const range = ref.slice("semver:".length);
+    if (range.trim() === "") {
+      throw new Error(`Invalid GitHub semver source. Expected github:owner/repo#semver:<range>`);
+    }
+    return { ref: range, refType: "semver" };
+  }
+  return { ref, refType: inferRefType(ref) };
 }
 
 function inferRefType(ref: string): "tag" | "branch" | "sha" {

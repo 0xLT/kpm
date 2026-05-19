@@ -26,7 +26,7 @@ binary.
 
 ```bash
 kpm init [--name @scope/project]
-kpm add github:owner/repo[#ref] | file:/path/to/package
+kpm add github:owner/repo[#ref|#semver:<range>] | file:/path/to/package
 kpm install
 kpm compose [--fresh] [--no-bridge] [--cli claude|codex|gemini]
 kpm pack [--out path]
@@ -47,6 +47,12 @@ Source specs:
   `HEAD` is used and treated as a mutable branch ref.
 - Refs that look like `v1.2.3` or `1.2.3` are treated as tags, 7-40 character
   hex refs are treated as SHAs, and everything else is treated as a branch.
+- `github:owner/repo#semver:<range>` resolves the range against GitHub tags
+  during `kpm add` or intentional lockfile regeneration. Tags such as `v0.2.4`
+  and `0.2.4` are accepted for comparison, and the highest satisfying tag is
+  pinned to its commit SHA in `knowledge.lock`.
+  Quote source specs with spaces when passing them through a shell, such as
+  `kpm add 'github:owner/repo#semver:>=1.2.0 <2.0.0'`.
 - `file:/path/to/package` reads a local package directory. Transitive relative
   `file:` dependencies are resolved relative to their local `file:` parent.
 
@@ -75,7 +81,8 @@ wiki/                # composed vault, configurable
   "files": ["**/*.md"],
   "entrypoint": "README.md",
   "knowledgeDependencies": {
-    "@team/sql-guide": "github:team/sql-guide#v0.2.0"
+    "@team/sql-guide": "github:team/sql-guide#v0.2.0",
+    "@team/solana": "github:team/solana#semver:^0.2.0"
   }
 }
 ```
@@ -111,6 +118,12 @@ hydrates `knowledge_modules/`.
 re-resolve `knowledge.json`, build, or synthesize the vault. If the lockfile is
 missing or empty while `knowledge.json` declares dependencies, `kpm install`
 errors instead of inventing a new lockfile implicitly.
+
+For semver GitHub dependencies, `kpm add` resolves the range once, records the
+original `#semver:<range>` spec plus the selected tag, commit SHA, commit-pinned
+tarball URL, and integrity values in `knowledge.lock`. Later `kpm install` runs
+only from that exact lockfile metadata and does not list tags or choose a newer
+matching version.
 
 `kpm compose` creates the vault:
 
@@ -173,8 +186,8 @@ warnings.
 `kpm pack` runs doctor, requires the entrypoint to be included by the package
 file globs, and writes `.kpm/pack/<scope>-<name>-<version>.tgz` by default. It
 also accepts `--out path`. It refuses to pack packages with mutable dependency
-refs such as `github:owner/repo#main`; use a tag or commit SHA for publishable
-packages.
+refs such as `github:owner/repo#main`; use a tag, commit SHA, or semver range
+for publishable packages.
 
 `kpm audit` is beta advisory signal only. It scans installed packages for
 unexpected file extensions and large text-like files, but it is not a security
