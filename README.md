@@ -26,7 +26,7 @@ binary.
 
 ```bash
 kpm init [--name @scope/project]
-kpm add github:owner/repo[#ref] | file:/absolute/path
+kpm add github:owner/repo[#ref] | file:/path/to/package
 kpm install
 kpm compose [--fresh] [--no-bridge] [--cli claude|codex|gemini]
 kpm pack [--out path]
@@ -35,8 +35,20 @@ kpm audit
 kpm describe --to AGENTS.md
 ```
 
-There is no `build`, `graph`, or `remove` command in v2. To remove a package,
-edit `knowledge.json` and run `kpm install`.
+There is no `build`, `graph`, `remove`, or standalone `update` command in v2.
+`kpm install` hydrates from the existing lockfile; it does not re-resolve
+manual `knowledge.json` dependency edits when `knowledge.lock` already has
+packages. `kpm add` is the command that re-resolves the dependency graph and
+rewrites both `knowledge.json` and `knowledge.lock`.
+
+Source specs:
+
+- `github:owner/repo[#ref]` fetches a GitHub tarball. If `#ref` is omitted,
+  `HEAD` is used and treated as a mutable branch ref.
+- Refs that look like `v1.2.3` or `1.2.3` are treated as tags, 7-40 character
+  hex refs are treated as SHAs, and everything else is treated as a branch.
+- `file:/path/to/package` reads a local package directory. Transitive relative
+  `file:` dependencies are resolved relative to their local `file:` parent.
 
 ## File Model
 
@@ -48,7 +60,7 @@ kpm.config.json      # consumer policy
 knowledge.lock       # resolved graph
 knowledge_modules/   # installed packages
 wiki/                # composed vault, configurable
-.kpm/                # cache, logs, pack artifacts
+.kpm/                # project logs and pack artifacts
 ```
 
 `knowledge.json` is the package contract:
@@ -68,6 +80,10 @@ wiki/                # composed vault, configurable
 }
 ```
 
+Only the fields shown above are accepted. `files` defaults to `["**/*.md"]`
+and supports leading `!` exclude patterns. `entrypoint` defaults to `README.md`
+and must be included by the publish globs for `kpm pack` to succeed.
+
 `kpm.config.json` is local consumer policy:
 
 ```json
@@ -78,6 +94,9 @@ wiki/                # composed vault, configurable
 }
 ```
 
+If `kpm.config.json` is missing, commands use the same defaults shown above.
+Fetched GitHub tarballs are cached globally under `~/.kpm/cache/`.
+
 `knowledge.lock` records the resolved graph: exact versions, winning specs,
 resolved URLs, ref type, commit SHA, content integrity, tarball integrity,
 dependency edges, requesters, and root override records.
@@ -85,10 +104,13 @@ dependency edges, requesters, and root override records.
 ## Install Vs Compose
 
 `kpm add` records a direct dependency in `knowledge.json`, resolves transitives,
-enforces singleton-by-name dependency semantics, and writes `knowledge.lock`.
+enforces singleton-by-name dependency semantics, writes `knowledge.lock`, and
+hydrates `knowledge_modules/`.
 
-`kpm install` hydrates `knowledge_modules/` from the lockfile. It does not build
-or synthesize the vault.
+`kpm install` hydrates `knowledge_modules/` from the lockfile. It does not
+re-resolve `knowledge.json`, build, or synthesize the vault. If the lockfile is
+missing or empty while `knowledge.json` declares dependencies, `kpm install`
+errors instead of inventing a new lockfile implicitly.
 
 `kpm compose` creates the vault:
 
@@ -99,7 +121,8 @@ or synthesize the vault.
 
 Use `--fresh` to wipe the vault before recomposing. Incremental compose clears
 derived package folders but preserves generated bridge files and user-authored
-notes outside copied package folders.
+notes outside copied package folders. If the lockfile has no packages, compose
+skips the bridge phase.
 
 ## Wikilink Rules
 
@@ -107,22 +130,24 @@ Compose and doctor resolve links strictly:
 
 - `[[@scope/pkg/path]]` targets an installed package.
 - `[[./sibling]]` and `[[../folder/note]]` resolve relative to the current note.
+- `[[folder/note]]` resolves as a local package path.
 - `[[name]]` resolves by filename slug inside the source package only.
 
 Bare links never cross package boundaries and do not fall back to H1 titles.
-Unresolved or ambiguous links are hard errors.
+Unresolved or ambiguous file targets are hard errors. Aliases and `#heading`
+anchors are preserved during rewrite, but heading anchors are not validated.
 
 ## LLM Bridge
 
 Built-in adapters:
 
-- `claude`
-- `codex`
-- `gemini`
+- `claude` runs `claude --print`
+- `codex` runs `codex exec -`
+- `gemini` runs `gemini --prompt -`
 
 `kpm compose --cli codex` overrides the configured default for one run. The
 adapter is spawned with `cwd` set to the vault and the kpm-owned bridge prompt
-piped to stdin.
+piped to stdin. Adapter output is logged to `.kpm/logs/compose-<timestamp>.log`.
 
 Generated files must include:
 
@@ -135,8 +160,9 @@ kpm-sources: ["@team/react-guide", "@team/sql-guide"]
 ---
 ```
 
-`kpm compose` refuses to overwrite `wiki/index.md` or `wiki/bridges/*.md` if the
-file lacks `kpm-generated: true`.
+When the bridge phase runs, `kpm compose` refuses to proceed if existing
+`wiki/index.md` or `wiki/bridges/*.md` files lack `kpm-generated: true`. After
+the adapter exits, kpm verifies that `wiki/index.md` exists and has that marker.
 
 ## Pack, Doctor, Audit
 
@@ -144,13 +170,15 @@ file lacks `kpm-generated: true`.
 wikilinks. Mutable branch refs are surfaced as info. Root override records are
 warnings.
 
-`kpm pack` writes `.kpm/pack/<scope>-<name>-<version>.tgz` by default. It refuses
-to pack packages with mutable dependency refs such as `github:owner/repo#main`.
-Use a tag or commit SHA for publishable packages.
+`kpm pack` runs doctor, requires the entrypoint to be included by the package
+file globs, and writes `.kpm/pack/<scope>-<name>-<version>.tgz` by default. It
+also accepts `--out path`. It refuses to pack packages with mutable dependency
+refs such as `github:owner/repo#main`; use a tag or commit SHA for publishable
+packages.
 
-`kpm audit` is beta advisory signal only. It flags suspicious package contents
-such as unexpected binary-looking files, but it is not a security boundary and
-must not be relied on as one.
+`kpm audit` is beta advisory signal only. It scans installed packages for
+unexpected file extensions and large text-like files, but it is not a security
+boundary and must not be relied on as one.
 
 ## Agent File Injection
 
