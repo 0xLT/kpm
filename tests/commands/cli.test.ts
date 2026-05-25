@@ -1,8 +1,12 @@
-import { mkdtemp, stat, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdtemp, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { main } from "../../src/cli.js";
+
+const execFileAsync = promisify(execFile);
 
 function captureStdio() {
   const out: string[] = [];
@@ -24,6 +28,19 @@ describe("cli", () => {
     for (const verb of ["init", "add", "install", "compose", "pack", "doctor", "audit", "describe"]) {
       expect(text).toContain(verb);
     }
+  });
+
+  it("runs when invoked through an installed bin symlink", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "kpm-bin-"));
+    const bin = join(dir, "kpm");
+    const cli = resolve("dist/cli.js");
+
+    await symlink(cli, bin);
+
+    const { stdout } = await execFileAsync(bin, ["--help"], { cwd: dir });
+
+    expect(stdout).toContain("kpm - npm-style package manager");
+    expect(stdout).toContain("Usage:");
   });
 
   it("init creates a project", async () => {
