@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { realpathSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 import { audit } from "./commands/audit.js";
 import { compose } from "./commands/compose.js";
 import { describeProject } from "./commands/describe.js";
@@ -124,6 +126,20 @@ function valueAfter(args: string[], flag: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Detect whether this module was invoked directly. process.argv[1] may be a
+// symlink (e.g. the npm-installed `kpm` bin), while import.meta.url is always
+// the resolved real path — so resolve argv[1] before comparing, otherwise the
+// CLI silently does nothing when run through its bin symlink.
+function invokedDirectly(): boolean {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return import.meta.url === pathToFileURL(realpathSync(entry)).href;
+  } catch {
+    return import.meta.url === pathToFileURL(entry).href;
+  }
+}
+
+if (invokedDirectly()) {
   process.exitCode = await main();
 }

@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
-    "test": "vitest run",
+    "test": "npm run build && vitest run",
     "typecheck": "tsc -p tsconfig.test.json --noEmit"
   },
   "engines": {
