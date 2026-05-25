@@ -6,8 +6,9 @@ locks their exact sources, composes them into an Obsidian-openable `wiki/`
 vault, and can hand that vault to an external LLM CLI for synthesis.
 
 Alpha status: the local CLI, GitHub/file installs, locking, compose, pack,
-doctor, audit, and agent-context commands exist. A public npm release, hosted
-registry, publish workflow, and graph command are not implemented yet.
+doctor, audit, and describe/agent-context injection commands exist. A public npm
+release, hosted registry, publish workflow, and graph command are not
+implemented yet.
 
 Use `kpm` when you want to:
 
