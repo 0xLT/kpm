@@ -1,26 +1,122 @@
-# knowledge-package-manager
+# knowledge-package-manager (`kpm`)
 
-`kpm` is an npm-style package manager for wiki-linked Markdown knowledge bases.
-It installs small versioned Markdown graphs, composes them into a single
-Obsidian-openable vault, and delegates synthesis to external LLM CLIs.
+`kpm` is an alpha CLI for sharing small, versioned Markdown knowledge bases the
+way developers share npm packages. It installs wiki-linked Markdown packages,
+locks their exact sources, composes them into an Obsidian-openable `wiki/`
+vault, and can hand that vault to an external LLM CLI for synthesis.
 
-The core split is deliberate:
+Alpha status: the local CLI, GitHub/file installs, locking, compose, pack,
+doctor, audit, and describe/agent-context injection commands exist. A public npm
+release, hosted registry, publish workflow, and graph command are not
+implemented yet.
 
-- `kpm` owns distribution, locking, mechanical copy, and wikilink rewriting.
-- Claude Code, Codex, or Gemini own generated synthesis such as `wiki/index.md`
-  and bridge notes.
-- Authors keep writing normal Markdown with `[[wikilinks]]`.
+Use `kpm` when you want to:
 
-## Install
+- keep reusable knowledge as normal Markdown with `[[wikilinks]]`;
+- pin exact GitHub tags, commits, or local package directories in a lockfile;
+- compose several knowledge packages into one vault for humans or agents; and
+- make generated LLM bridge notes explicit and replaceable.
+
+Do not use `kpm` as:
+
+- a hosted package registry or publishing service;
+- a replacement for npm, pnpm, Obsidian Sync, or Git;
+- a security sandbox for untrusted content; or
+- a general Markdown site generator.
+
+## Install and local development
+
+Requirements:
+
+- Node.js >=20
+- npm
+
+This repository is not published to npm yet. Until it is, install from a clone
+and run the built CLI locally:
 
 ```bash
-npm install
+git clone https://github.com/0xLT/kpm.git
+cd kpm
+npm ci
 npm run build
 npm test
+npm run typecheck
 ```
 
-The built CLI entrypoint is `dist/cli.js` and the package exposes `kpm` as its
-binary.
+The built CLI entrypoint is `dist/cli.js`. During local development you can run
+it with `node dist/cli.js ...`, or create a temporary shell alias:
+
+```bash
+alias kpm="node $(pwd)/dist/cli.js"
+kpm --help
+```
+
+Future npm install shape, once publishing is ready:
+
+```bash
+npm install -g knowledge-package-manager
+kpm --help
+```
+
+The npm package name is currently `knowledge-package-manager`; the exposed
+binary name is `kpm`.
+
+## 5-minute quickstart
+
+This quickstart creates an empty knowledge package, validates it, and composes an
+empty local vault without invoking an LLM bridge.
+
+```bash
+# From a built clone of this repository.
+mkdir /tmp/kpm-demo
+cd /tmp/kpm-demo
+node /path/to/kpm/dist/cli.js init --name @demo/ai-handbook
+node /path/to/kpm/dist/cli.js doctor
+node /path/to/kpm/dist/cli.js compose --no-bridge
+```
+
+Expected output:
+
+```text
+Initialized knowledge package.
+Doctor ok.
+copy phase complete -> wiki/
+compose complete (bridge phase skipped)
+Composed vault.
+```
+
+Expected project files for the empty-package quickstart:
+
+```text
+.gitignore
+knowledge.json        # package contract
+kpm.config.json       # local consumer policy
+```
+
+Because this package has no dependencies yet, `compose --no-bridge` prints the
+vault target but does not need to copy any package files.
+
+A fresh `knowledge.json` looks like this:
+
+```json
+{
+  "name": "@demo/ai-handbook",
+  "version": "0.1.0",
+  "type": "knowledge-package"
+}
+```
+
+To install package content, add a GitHub or local file dependency, then compose
+again:
+
+```bash
+kpm add github:owner/repo#v0.1.0
+kpm compose --no-bridge
+```
+
+Use a real repository that contains a valid `knowledge.json`. For publishable
+packages, prefer tags, commit SHAs, or `#semver:<range>` over mutable branch refs
+such as `#main`.
 
 ## Commands
 
@@ -36,10 +132,10 @@ kpm describe --to AGENTS.md
 ```
 
 There is no `build`, `graph`, `remove`, or standalone `update` command in v2.
-`kpm install` hydrates from the existing lockfile; it does not re-resolve
-manual `knowledge.json` dependency edits when `knowledge.lock` already has
-packages. `kpm add` is the command that re-resolves the dependency graph and
-rewrites both `knowledge.json` and `knowledge.lock`.
+`kpm install` hydrates from the existing lockfile; it does not re-resolve manual
+`knowledge.json` dependency edits when `knowledge.lock` already has packages.
+`kpm add` is the command that re-resolves the dependency graph and rewrites both
+`knowledge.json` and `knowledge.lock`.
 
 Source specs:
 
@@ -56,7 +152,7 @@ Source specs:
 - `file:/path/to/package` reads a local package directory. Transitive relative
   `file:` dependencies are resolved relative to their local `file:` parent.
 
-## File Model
+## File model
 
 Project roots mirror npm-style package roots:
 
@@ -108,7 +204,7 @@ Fetched GitHub tarballs are cached globally under `~/.kpm/cache/`.
 resolved URLs, ref type, commit SHA, content integrity, tarball integrity,
 dependency edges, requesters, and root override records.
 
-## Install Vs Compose
+## Install vs compose
 
 `kpm add` records a direct dependency in `knowledge.json`, resolves transitives,
 enforces singleton-by-name dependency semantics, writes `knowledge.lock`, and
@@ -137,7 +233,7 @@ derived package folders but preserves generated bridge files and user-authored
 notes outside copied package folders. If the lockfile has no packages, compose
 skips the bridge phase.
 
-## Wikilink Rules
+## Wikilink rules
 
 Compose and doctor resolve links strictly:
 
@@ -150,7 +246,7 @@ Bare links never cross package boundaries and do not fall back to H1 titles.
 Unresolved or ambiguous file targets are hard errors. Aliases and `#heading`
 anchors are preserved during rewrite, but heading anchors are not validated.
 
-## LLM Bridge
+## LLM bridge
 
 Built-in adapters:
 
@@ -177,7 +273,7 @@ When the bridge phase runs, `kpm compose` refuses to proceed if existing
 `wiki/index.md` or `wiki/bridges/*.md` files lack `kpm-generated: true`. After
 the adapter exits, kpm verifies that `wiki/index.md` exists and has that marker.
 
-## Pack, Doctor, Audit
+## Pack, doctor, and audit
 
 `kpm doctor` validates manifests, installed packages, lockfile signals, and
 wikilinks. Mutable branch refs are surfaced as info. Root override records are
@@ -193,7 +289,7 @@ for publishable packages.
 unexpected file extensions and large text-like files, but it is not a security
 boundary and must not be relied on as one.
 
-## Agent File Injection
+## Agent file injection
 
 `kpm describe --to AGENTS.md` injects a marker-wrapped summary of the composed
 vault into the selected file. It is opt-in and updates only the managed block on
@@ -204,3 +300,18 @@ rerun.
 ...
 <!-- END KPM-CONTEXT -->
 ```
+
+## OSS roadmap
+
+Open-source readiness work is being staged before a broader registry effort:
+
+1. README quickstart and honest alpha positioning.
+2. License and package metadata.
+3. Contributor governance, security policy, and GitHub templates.
+4. GitHub Actions quality gates.
+5. Changelog, release checklist, and roadmap docs.
+6. Public examples and end-to-end tutorial.
+7. GitHub repository settings polish.
+
+Until the linked docs exist in this repository, this README is the source of
+truth for local development and current CLI behavior.
