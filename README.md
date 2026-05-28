@@ -151,6 +151,9 @@ Source specs:
   `kpm add 'github:owner/repo#semver:>=1.2.0 <2.0.0'`.
 - `file:/path/to/package` reads a local package directory. Transitive relative
   `file:` dependencies are resolved relative to their local `file:` parent.
+- Set `GITHUB_TOKEN` (or `GH_TOKEN`) in the environment to authenticate GitHub
+  API and tarball requests. This raises the GitHub rate limit and is required for
+  private repositories. Without a token, kpm uses unauthenticated requests.
 
 ## File model
 
