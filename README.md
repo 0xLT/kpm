@@ -301,6 +301,11 @@ rerun.
 <!-- END KPM-CONTEXT -->
 ```
 
+## License
+
+`knowledge-package-manager` is released under the MIT License. See
+[LICENSE](LICENSE).
+
 ## OSS roadmap
 
 Open-source readiness work is being staged before a broader registry effort:
