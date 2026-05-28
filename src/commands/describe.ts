@@ -1,13 +1,13 @@
 import { resolve } from "node:path";
 import { injectDescription } from "../describe/inject.js";
 import { readKpmConfig } from "../manifest/config.js";
-import { readKnowledgeManifest } from "../manifest/knowledge.js";
+import { readProjectManifest } from "../manifest/knowledge.js";
 import { readLockfile } from "../manifest/lock.js";
 
 export type DescribeOptions = { to: string };
 
 export async function describeProject(projectRoot: string, options: DescribeOptions): Promise<void> {
-  const manifest = await readKnowledgeManifest(projectRoot);
+  const manifest = await readProjectManifest(projectRoot);
   const cfg = await readKpmConfig(projectRoot);
   const lock = await readLockfile(projectRoot);
 
