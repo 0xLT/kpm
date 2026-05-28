@@ -3,14 +3,14 @@ import { dirname, join } from "node:path";
 import { c as tarCreate } from "tar";
 import { listPackageFiles } from "../files.js";
 import { readKpmConfig } from "../manifest/config.js";
-import { readKnowledgeManifest } from "../manifest/knowledge.js";
+import { readProjectManifest } from "../manifest/knowledge.js";
 import { parsePackageSource } from "../resolver/sources.js";
 import { doctor } from "./doctor.js";
 
 export type PackOptions = { out?: string };
 
 export async function packPackage(packageRoot: string, options: PackOptions = {}): Promise<string> {
-  const manifest = await readKnowledgeManifest(packageRoot);
+  const manifest = await readProjectManifest(packageRoot);
   const cfg = await readKpmConfig(packageRoot);
 
   for (const [depName, spec] of Object.entries(manifest.knowledgeDependencies)) {

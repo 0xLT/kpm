@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { readJsonFile } from "../files.js";
+import { fileExists, readJsonFile } from "../files.js";
 import { isSafeRelativePath } from "../paths.js";
 import type { KnowledgeManifest } from "../types.js";
 
@@ -30,6 +30,14 @@ export function parseKnowledgeManifest(raw: unknown): KnowledgeManifest {
 
 export async function readKnowledgeManifest(root: string): Promise<KnowledgeManifest> {
   return parseKnowledgeManifest(await readJsonFile(join(root, "knowledge.json")));
+}
+
+export async function readProjectManifest(root: string): Promise<KnowledgeManifest> {
+  const path = join(root, "knowledge.json");
+  if (!(await fileExists(path))) {
+    throw new Error(`No knowledge.json found in ${root}. Run \`kpm init\` first.`);
+  }
+  return parseKnowledgeManifest(await readJsonFile(path));
 }
 
 export function validateKnowledgeManifest(raw: unknown): ValidationResult {
