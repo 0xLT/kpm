@@ -2,6 +2,27 @@
   "name": "knowledge-package-manager",
   "version": "2.0.0-alpha.1",
   "description": "npm-style package manager for wiki-linked Markdown knowledge bases.",
+  "license": "MIT",
+  "author": "0xLT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xLT/kpm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/0xLT/kpm/issues"
+  },
+  "homepage": "https://github.com/0xLT/kpm#readme",
+  "keywords": [
+    "markdown",
+    "obsidian",
+    "knowledge-management",
+    "knowledge-base",
+    "cli",
+    "typescript",
+    "llm",
+    "package-manager",
+    "wikilinks"
+  ],
   "type": "module",
   "files": [
     "dist",
