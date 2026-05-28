@@ -301,6 +301,13 @@ rerun.
 <!-- END KPM-CONTEXT -->
 ```
 
+## Contributing and security
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) explains local setup, test commands, PR expectations, and fixture conventions.
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) sets community participation expectations.
+- [SECURITY.md](SECURITY.md) explains supported alpha versions, vulnerability reporting, and the current security model.
+- GitHub issue and pull request templates live under [.github/](.github/).
+
 ## License
 
 `knowledge-package-manager` is released under the MIT License. See
@@ -318,5 +325,5 @@ Open-source readiness work is being staged before a broader registry effort:
 6. Public examples and end-to-end tutorial.
 7. GitHub repository settings polish.
 
-Until the linked docs exist in this repository, this README is the source of
-truth for local development and current CLI behavior.
+Use the linked contributor and security docs for project participation details;
+this README remains the source of truth for current CLI behavior.

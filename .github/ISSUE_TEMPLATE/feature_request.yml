@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest a focused improvement for kpm
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user workflow is blocked or awkward today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the smallest behavior or documentation change that would help.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This does not assume an implemented hosted registry, publish workflow, or graph command unless the request is explicitly about future roadmap work.
+          required: true
+        - label: I can help with docs, tests, or examples for this change.
+          required: false
