@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { create as tarCreate } from "tar";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { installFromLockfile, installNew } from "../../src/commands/install.js";
+import { installFromLockfile, installNew, removeDependency, updateDependencies } from "../../src/commands/install.js";
 
 const fixture = (name: string) => resolve(new URL(`../fixtures/${name}`, import.meta.url).pathname);
 
@@ -164,6 +164,58 @@ describe("kpm install / add", () => {
     await expect(installNew(project, "github:team/solana#semver:^0.2.0")).rejects.toThrow(
       /@team\/solana: ref v0\.2\.4 does not match manifest version 0\.2\.3/
     );
+  });
+
+  it("remove drops a direct dependency and its now-unused transitives", async () => {
+    const project = await makeProject();
+    await installNew(project, `file:${fixture("file-pkg-a")}`);
+    const before = JSON.parse(await readFile(join(project, "knowledge.lock"), "utf8"));
+    expect(Object.keys(before.packages).sort()).toEqual(["@fix/a", "@fix/b"]);
+
+    await removeDependency(project, "@fix/a");
+
+    const json = JSON.parse(await readFile(join(project, "knowledge.json"), "utf8"));
+    expect(json.knowledgeDependencies ?? {}).toEqual({});
+    const lock = JSON.parse(await readFile(join(project, "knowledge.lock"), "utf8"));
+    expect(Object.keys(lock.packages)).toEqual([]);
+    await expect(readdir(join(project, "knowledge_modules", "@fix"))).rejects.toThrow();
+  });
+
+  it("remove errors when the package is not a direct dependency", async () => {
+    const project = await makeProject();
+    await expect(removeDependency(project, "@fix/missing")).rejects.toThrow(/not a direct dependency/);
+  });
+
+  it("update re-resolves a semver dependency to a newer matching tag", async () => {
+    const project = await makeProject();
+    const commit24 = "a".repeat(40);
+    stubGithubFetch(await makePackageTarball("@team/solana", "0.2.4"), {
+      tags: ["v0.2.0", "v0.2.4"],
+      commits: { "v0.2.4": commit24 }
+    });
+    await installNew(project, "github:team/solana#semver:^0.2.0");
+    const initial = JSON.parse(await readFile(join(project, "knowledge.lock"), "utf8"));
+    expect(initial.packages["@team/solana"].ref).toBe("v0.2.4");
+
+    vi.unstubAllGlobals();
+    const commit25 = "b".repeat(40);
+    stubGithubFetch(await makePackageTarball("@team/solana", "0.2.5"), {
+      tags: ["v0.2.0", "v0.2.4", "v0.2.5"],
+      commits: { "v0.2.5": commit25 }
+    });
+    await updateDependencies(project);
+
+    const updated = JSON.parse(await readFile(join(project, "knowledge.lock"), "utf8"));
+    expect(updated.packages["@team/solana"].ref).toBe("v0.2.5");
+    expect(updated.packages["@team/solana"].commit).toBe(commit25);
+    // knowledge.json keeps the declared range, not the resolved tag.
+    const json = JSON.parse(await readFile(join(project, "knowledge.json"), "utf8"));
+    expect(json.knowledgeDependencies["@team/solana"]).toBe("github:team/solana#semver:^0.2.0");
+  });
+
+  it("update errors when the named package is not a direct dependency", async () => {
+    const project = await makeProject();
+    await expect(updateDependencies(project, "@fix/missing")).rejects.toThrow(/not a direct dependency/);
   });
 });
 

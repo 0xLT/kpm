@@ -6,7 +6,7 @@ import { compose } from "./commands/compose.js";
 import { describeProject } from "./commands/describe.js";
 import { doctor } from "./commands/doctor.js";
 import { initProject } from "./commands/init.js";
-import { installFromLockfile, installNew } from "./commands/install.js";
+import { installFromLockfile, installNew, removeDependency, updateDependencies } from "./commands/install.js";
 import { packPackage } from "./commands/pack.js";
 
 type CommandContext = {
@@ -41,6 +41,21 @@ export async function main(argv = process.argv.slice(2), ctx: CommandContext = d
         await installFromLockfile(ctx.cwd);
         ctx.stdout.write("Installed from lockfile.\n");
         return 0;
+      case "remove": {
+        const name = firstPositional(args);
+        if (!name) {
+          throw new Error("Usage: kpm remove <name>");
+        }
+        await removeDependency(ctx.cwd, name);
+        ctx.stdout.write(`Removed ${name}\n`);
+        return 0;
+      }
+      case "update": {
+        const name = firstPositional(args);
+        await updateDependencies(ctx.cwd, name);
+        ctx.stdout.write(name ? `Updated ${name}\n` : "Updated all dependencies.\n");
+        return 0;
+      }
       case "compose":
         await compose(ctx.cwd, {
           fresh: args.includes("--fresh"),
@@ -104,7 +119,9 @@ function helpText(): string {
 Usage:
   kpm init [--name @scope/project]
   kpm add github:owner/repo[#ref|#semver:<range>] | file:/path/to/package
+  kpm remove <name>
   kpm install
+  kpm update [name]
   kpm compose [--fresh] [--no-bridge] [--cli claude|codex|gemini]
   kpm pack [--out path]
   kpm doctor

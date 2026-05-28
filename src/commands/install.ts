@@ -5,6 +5,7 @@ import { readKnowledgeManifest } from "../manifest/knowledge.js";
 import { readLockfile, writeLockfile } from "../manifest/lock.js";
 import { materializeLockfilePackage, materializeSource } from "../resolver/fetch.js";
 import { buildInstallPlan } from "../resolver/plan.js";
+import type { DependencyRequest } from "../resolver/singleton.js";
 import { parsePackageSource } from "../resolver/sources.js";
 import { warnMutableRef } from "../resolver/warnings.js";
 import type { KnowledgeManifest, Lockfile, LockfilePackage } from "../types.js";
@@ -36,16 +37,67 @@ export async function installFromLockfile(projectRoot: string): Promise<void> {
   await hydrateFromLockfile(projectRoot, lock);
 }
 
+export async function removeDependency(projectRoot: string, name: string): Promise<void> {
+  const rootManifest = await readKnowledgeManifest(projectRoot);
+  if (!rootManifest.knowledgeDependencies[name]) {
+    throw new Error(`${name} is not a direct dependency in knowledge.json`);
+  }
+  delete rootManifest.knowledgeDependencies[name];
+  await writeJsonFile(join(projectRoot, "knowledge.json"), stripDefaults(rootManifest));
+  await reinstall(projectRoot, rootManifest);
+}
+
+export async function updateDependencies(projectRoot: string, name?: string): Promise<void> {
+  const rootManifest = await readKnowledgeManifest(projectRoot);
+  const deps = rootManifest.knowledgeDependencies;
+  if (name && !deps[name]) {
+    throw new Error(`${name} is not a direct dependency in knowledge.json`);
+  }
+
+  let initial: DependencyRequest[];
+  if (!name) {
+    initial = toRootRequests(deps);
+  } else {
+    const lock = await readLockfile(projectRoot);
+    initial = Object.entries(deps).map(([depName, source]) => ({
+      name: depName,
+      source: depName === name ? source : pinnedSpec(source, lock.packages[depName]),
+      requestedBy: "root"
+    }));
+  }
+
+  await resolveAndWrite(projectRoot, { name: rootManifest.name, version: rootManifest.version }, initial);
+}
+
 async function reinstall(projectRoot: string, rootManifest: KnowledgeManifest): Promise<void> {
-  const initial = Object.entries(rootManifest.knowledgeDependencies).map(([name, source]) => ({
-    name,
-    source,
-    requestedBy: "root"
-  }));
+  await resolveAndWrite(
+    projectRoot,
+    { name: rootManifest.name, version: rootManifest.version },
+    toRootRequests(rootManifest.knowledgeDependencies)
+  );
+}
+
+function toRootRequests(deps: Record<string, string>): DependencyRequest[] {
+  return Object.entries(deps).map(([name, source]) => ({ name, source, requestedBy: "root" }));
+}
+
+function pinnedSpec(declaredSpec: string, lockEntry: LockfilePackage | undefined): string {
+  if (!lockEntry || !lockEntry.commit || lockEntry.resolved.startsWith("file:")) {
+    return declaredSpec;
+  }
+  const match = lockEntry.resolved.match(/\/repos\/([^/]+)\/([^/]+)\/tarball\//);
+  return match ? `github:${match[1]}/${match[2]}#${lockEntry.commit}` : declaredSpec;
+}
+
+async function resolveAndWrite(
+  projectRoot: string,
+  root: { name: string; version: string },
+  initial: DependencyRequest[]
+): Promise<void> {
   const plan = await buildInstallPlan(initial);
   const lock: Lockfile = {
     lockfileVersion: 2,
-    root: { name: rootManifest.name, version: rootManifest.version },
+    root,
     packages: {}
   };
 
