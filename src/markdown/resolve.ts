@@ -8,9 +8,7 @@ export type LinkablePackage = {
   noteSlugs: Map<string, string[]>;
 };
 
-export type WikiLinkResolution =
-  | { ok: true; target: string }
-  | { ok: false; message: string };
+export type WikiLinkResolution = { ok: true; target: string } | { ok: false; message: string };
 
 export function createLinkablePackage(name: string, files: Iterable<string>): LinkablePackage {
   const fileSet = new Set(files);

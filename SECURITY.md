@@ -4,10 +4,10 @@
 
 `kpm` is currently published as an alpha project. Security fixes are expected to target the current `main` branch and the latest alpha release line when releases are available.
 
-| Version | Supported |
-| --- | --- |
+| Version         | Supported   |
+| --------------- | ----------- |
 | `2.0.0-alpha.x` | Best-effort |
-| Older versions | No |
+| Older versions  | No          |
 
 ## Reporting a vulnerability
 

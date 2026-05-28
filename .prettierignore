@@ -1,0 +1,6 @@
+dist/
+node_modules/
+coverage/
+knowledge_modules/
+.kpm/
+package-lock.json

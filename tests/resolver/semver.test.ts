@@ -34,12 +34,7 @@ describe("resolveHighestMatchingSemverTag", () => {
   it("resolves caret ranges to the highest matching tag", () => {
     expect(
       resolveHighestMatchingSemverTag(
-        [
-          { name: "v1.0.0" },
-          { name: "v1.2.0" },
-          { name: "v1.2.3" },
-          { name: "v2.0.0" }
-        ],
+        [{ name: "v1.0.0" }, { name: "v1.2.0" }, { name: "v1.2.3" }, { name: "v2.0.0" }],
         "^1.2.0",
         "github:acme/x#semver:^1.2.0"
       )
@@ -68,11 +63,7 @@ describe("resolveHighestMatchingSemverTag", () => {
 
   it("throws a helpful error when no tag satisfies the range", () => {
     expect(() =>
-      resolveHighestMatchingSemverTag(
-        [{ name: "v1.0.0" }, { name: "v2.0.0" }],
-        "^1.2.0",
-        "github:acme/x#semver:^1.2.0"
-      )
+      resolveHighestMatchingSemverTag([{ name: "v1.0.0" }, { name: "v2.0.0" }], "^1.2.0", "github:acme/x#semver:^1.2.0")
     ).toThrow(/No GitHub tag satisfies semver range "\^1\.2\.0" for github:acme\/x#semver:\^1\.2\.0/);
   });
 

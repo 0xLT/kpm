@@ -8,10 +8,16 @@ describe("compose copyAndRewrite", () => {
   async function setupAB(project: string) {
     const a = join(project, "knowledge_modules", "@fix", "a");
     await mkdir(a, { recursive: true });
-    await writeFile(join(a, "knowledge.json"), JSON.stringify({ name: "@fix/a", version: "0.1.0", type: "knowledge-package" }));
+    await writeFile(
+      join(a, "knowledge.json"),
+      JSON.stringify({ name: "@fix/a", version: "0.1.0", type: "knowledge-package" })
+    );
     const b = join(project, "knowledge_modules", "@fix", "b");
     await mkdir(b, { recursive: true });
-    await writeFile(join(b, "knowledge.json"), JSON.stringify({ name: "@fix/b", version: "0.1.0", type: "knowledge-package" }));
+    await writeFile(
+      join(b, "knowledge.json"),
+      JSON.stringify({ name: "@fix/b", version: "0.1.0", type: "knowledge-package" })
+    );
     return { a, b };
   }
 
