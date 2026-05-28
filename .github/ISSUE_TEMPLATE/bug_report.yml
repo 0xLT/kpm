@@ -45,7 +45,7 @@ body:
     attributes:
       label: Package source type
       options:
-        - local file: package
+        - "local file: package"
         - GitHub package
         - no package source / init-only
         - other
