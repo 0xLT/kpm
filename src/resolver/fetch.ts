@@ -28,6 +28,34 @@ function githubHeaders(accept?: string): Record<string, string> {
   return headers;
 }
 
+function tarballHeaders(url: string): Record<string, string> {
+  return shouldAuthenticateTarballUrl(url) ? githubHeaders() : { "user-agent": USER_AGENT };
+}
+
+function shouldAuthenticateTarballUrl(rawUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  if (url.protocol !== "https:") {
+    return false;
+  }
+
+  if (url.hostname === "api.github.com") {
+    return /^\/repos\/[^/]+\/[^/]+\/tarball\/[^/]+/.test(url.pathname);
+  }
+  if (url.hostname === "codeload.github.com") {
+    return /^\/[^/]+\/[^/]+\/tar\.(?:gz|zip)\/[^/]+/.test(url.pathname);
+  }
+  if (url.hostname === "github.com") {
+    return /^\/[^/]+\/[^/]+\/archive\//.test(url.pathname);
+  }
+  return false;
+}
+
 export type GitHubTag = {
   name: string;
 };
@@ -257,7 +285,7 @@ export async function resolveGithubCommit(
 }
 
 export async function fetchTarballBytes(url: string, fetchImpl: typeof fetch = fetch): Promise<Buffer> {
-  const response = await fetchImpl(url, { headers: githubHeaders() });
+  const response = await fetchImpl(url, { headers: tarballHeaders(url) });
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.status}`);
   }

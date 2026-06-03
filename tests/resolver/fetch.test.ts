@@ -83,8 +83,17 @@ describe("github authentication", () => {
     process.env.GITHUB_TOKEN = "secret-token";
     delete process.env.GH_TOKEN;
     const { calls, impl } = recordingFetch("payload");
-    await fetchTarballBytes("https://api.github.com/x", impl);
+    await fetchTarballBytes("https://api.github.com/repos/o/r/tarball/abc1234", impl);
     expect(calls[0].authorization).toBe("Bearer secret-token");
+    expect(calls[0]["user-agent"]).toBe("kpm/2");
+  });
+
+  it("does not send GitHub credentials to non-GitHub tarball URLs", async () => {
+    process.env.GITHUB_TOKEN = "secret-token";
+    delete process.env.GH_TOKEN;
+    const { calls, impl } = recordingFetch("payload");
+    await fetchTarballBytes("https://example.invalid/pkg.tgz", impl);
+    expect(calls[0].authorization).toBeUndefined();
     expect(calls[0]["user-agent"]).toBe("kpm/2");
   });
 
