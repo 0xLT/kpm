@@ -5,8 +5,14 @@ import { join } from "node:path";
 import { gzip } from "node:zlib";
 import { promisify } from "node:util";
 import { create as tarCreate } from "tar";
-import { describe, expect, it } from "vitest";
-import { extractTarball, materializeFileSource } from "../../src/resolver/fetch.js";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  extractTarball,
+  fetchTarballBytes,
+  listGithubTags,
+  materializeFileSource,
+  resolveGithubCommit
+} from "../../src/resolver/fetch.js";
 
 const gzipAsync = promisify(gzip);
 
@@ -54,6 +60,76 @@ describe("extractTarball", () => {
     expect(materialized.resolvedUrl).toBe(`file:${join(work, "pkg")}`);
   });
 });
+
+describe("github authentication", () => {
+  const originalToken = process.env.GITHUB_TOKEN;
+  const originalGh = process.env.GH_TOKEN;
+
+  afterEach(() => {
+    restoreEnv("GITHUB_TOKEN", originalToken);
+    restoreEnv("GH_TOKEN", originalGh);
+  });
+
+  function recordingFetch(body: string) {
+    const calls: Array<Record<string, string>> = [];
+    const impl = (async (_url: unknown, options?: { headers?: Record<string, string> }) => {
+      calls.push(options?.headers ?? {});
+      return new Response(body, { status: 200 });
+    }) as unknown as typeof fetch;
+    return { calls, impl };
+  }
+
+  it("sends a Bearer Authorization header when GITHUB_TOKEN is set", async () => {
+    process.env.GITHUB_TOKEN = "secret-token";
+    delete process.env.GH_TOKEN;
+    const { calls, impl } = recordingFetch("payload");
+    await fetchTarballBytes("https://api.github.com/repos/o/r/tarball/abc1234", impl);
+    expect(calls[0].authorization).toBe("Bearer secret-token");
+    expect(calls[0]["user-agent"]).toBe("kpm/2");
+  });
+
+  it("does not send GitHub credentials to non-GitHub tarball URLs", async () => {
+    process.env.GITHUB_TOKEN = "secret-token";
+    delete process.env.GH_TOKEN;
+    const { calls, impl } = recordingFetch("payload");
+    await fetchTarballBytes("https://example.invalid/pkg.tgz", impl);
+    expect(calls[0].authorization).toBeUndefined();
+    expect(calls[0]["user-agent"]).toBe("kpm/2");
+  });
+
+  it("omits the Authorization header when no token is set", async () => {
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.GH_TOKEN;
+    const { calls, impl } = recordingFetch(JSON.stringify({ sha: "abc1234" }));
+    await resolveGithubCommit("o", "r", "main", "src", impl);
+    expect(calls[0].authorization).toBeUndefined();
+    expect(calls[0]["user-agent"]).toBe("kpm/2");
+  });
+
+  it("falls back to GH_TOKEN when GITHUB_TOKEN is unset", async () => {
+    delete process.env.GITHUB_TOKEN;
+    process.env.GH_TOKEN = "gh-secret";
+    const { calls, impl } = recordingFetch(JSON.stringify([{ name: "v1.0.0" }]));
+    await listGithubTags("o", "r", impl);
+    expect(calls[0].authorization).toBe("Bearer gh-secret");
+  });
+
+  it("falls back to GH_TOKEN when GITHUB_TOKEN is blank", async () => {
+    process.env.GITHUB_TOKEN = "  \t";
+    process.env.GH_TOKEN = "gh-secret";
+    const { calls, impl } = recordingFetch(JSON.stringify([{ name: "v1.0.0" }]));
+    await listGithubTags("o", "r", impl);
+    expect(calls[0].authorization).toBe("Bearer gh-secret");
+  });
+});
+
+function restoreEnv(key: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[key];
+  } else {
+    process.env[key] = value;
+  }
+}
 
 async function writeMaliciousTarball(path: string): Promise<void> {
   const body = Buffer.from("escape\n");
