@@ -113,6 +113,14 @@ describe("github authentication", () => {
     await listGithubTags("o", "r", impl);
     expect(calls[0].authorization).toBe("Bearer gh-secret");
   });
+
+  it("falls back to GH_TOKEN when GITHUB_TOKEN is blank", async () => {
+    process.env.GITHUB_TOKEN = "  \t";
+    process.env.GH_TOKEN = "gh-secret";
+    const { calls, impl } = recordingFetch(JSON.stringify([{ name: "v1.0.0" }]));
+    await listGithubTags("o", "r", impl);
+    expect(calls[0].authorization).toBe("Bearer gh-secret");
+  });
 });
 
 function restoreEnv(key: string, value: string | undefined): void {

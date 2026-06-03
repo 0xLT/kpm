@@ -12,8 +12,13 @@ import type { PackageSource } from "./sources.js";
 const USER_AGENT = "kpm/2";
 
 function githubAuthToken(): string | undefined {
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  return token && token.trim() !== "" ? token.trim() : undefined;
+  for (const candidate of [process.env.GITHUB_TOKEN, process.env.GH_TOKEN]) {
+    const token = candidate?.trim();
+    if (token) {
+      return token;
+    }
+  }
+  return undefined;
 }
 
 function githubHeaders(accept?: string): Record<string, string> {
