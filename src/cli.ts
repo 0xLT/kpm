@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { realpathSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { audit } from "./commands/audit.js";
 import { compose } from "./commands/compose.js";
@@ -23,6 +23,10 @@ export async function main(argv = process.argv.slice(2), ctx: CommandContext = d
       case "-h":
       case "--help":
         ctx.stdout.write(helpText());
+        return 0;
+      case "-v":
+      case "--version":
+        ctx.stdout.write(versionText());
         return 0;
       case "init":
         await initProject(ctx.cwd, valueAfter(args, "--name"));
@@ -111,6 +115,11 @@ export async function main(argv = process.argv.slice(2), ctx: CommandContext = d
     ctx.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     return 1;
   }
+}
+
+function versionText(): string {
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version?: string };
+  return `${pkg.version ?? "0.0.0"}\n`;
 }
 
 function helpText(): string {

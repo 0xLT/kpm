@@ -1,10 +1,14 @@
 import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdtemp, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { main } from "../../src/cli.js";
+
+const pkgVersion = (JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string })
+  .version;
 
 const execFileAsync = promisify(execFile);
 
@@ -41,6 +45,23 @@ describe("cli", () => {
 
     expect(stdout).toContain("kpm - npm-style package manager");
     expect(stdout).toContain("Usage:");
+  });
+
+  it("--version and -v print the package version", async () => {
+    for (const flag of ["--version", "-v"]) {
+      const io = captureStdio();
+      const code = await main([flag], { cwd: process.cwd(), stdout: io.stdout, stderr: io.stderr });
+      expect(code).toBe(0);
+      expect(io.out.join("").trim()).toBe(pkgVersion);
+    }
+  });
+
+  it("add in an uninitialized directory fails with guidance to run kpm init", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "kpm-noinit-"));
+    const io = captureStdio();
+    const code = await main(["add", "file:/tmp/whatever"], { cwd: dir, stdout: io.stdout, stderr: io.stderr });
+    expect(code).toBe(1);
+    expect(io.err.join("")).toContain("kpm init");
   });
 
   it("init creates a project", async () => {
