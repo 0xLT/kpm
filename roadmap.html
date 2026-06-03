@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>kpm Roadmap</title>
+<style>
+  :root {
+    --bg: #f7f7fb;
+    --surface: #ffffff;
+    --surface-2: #f0f0f6;
+    --border: #e2e2ec;
+    --text: #1c1c28;
+    --text-muted: #5c5c70;
+    --text-faint: #8a8a9c;
+    --accent: #6d4aff;
+    --accent-soft: #efeaff;
+    --accent-b: #0ea5a5;
+    --accent-b-soft: #d8f5f3;
+    --eff-s-bg: #e3f6ea; --eff-s-fg: #1f7a46;
+    --eff-m-bg: #fff1d6; --eff-m-fg: #946200;
+    --eff-l-bg: #f0e6ff; --eff-l-fg: #6234c4;
+    --st-done-bg: #e3f6ea; --st-done-fg: #1f7a46;
+    --st-flight-bg: #e1ecff; --st-flight-fg: #2657c9;
+    --st-planned-bg: #ececf2; --st-planned-fg: #5c5c70;
+    --shadow: 0 1px 2px rgba(20,20,40,.06), 0 6px 20px rgba(20,20,40,.05);
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e0e14;
+    --surface: #16161f;
+    --surface-2: #1d1d2a;
+    --border: #2a2a3a;
+    --text: #ececf2;
+    --text-muted: #a6a6bb;
+    --text-faint: #74748a;
+    --accent: #9d80ff;
+    --accent-soft: #241a44;
+    --accent-b: #2dd4cf;
+    --accent-b-soft: #103230;
+    --eff-s-bg: #12321f; --eff-s-fg: #6ee0a0;
+    --eff-m-bg: #3a2c08; --eff-m-fg: #f3c969;
+    --eff-l-bg: #271845; --eff-l-fg: #c4a8ff;
+    --st-done-bg: #12321f; --st-done-fg: #6ee0a0;
+    --st-flight-bg: #16294f; --st-flight-fg: #8fb4ff;
+    --st-planned-bg: #23232f; --st-planned-fg: #a6a6bb;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root[data-theme="auto"] {
+      --bg: #0e0e14; --surface: #16161f; --surface-2: #1d1d2a; --border: #2a2a3a;
+      --text: #ececf2; --text-muted: #a6a6bb; --text-faint: #74748a;
+      --accent: #9d80ff; --accent-soft: #241a44; --accent-b: #2dd4cf; --accent-b-soft: #103230;
+      --eff-s-bg: #12321f; --eff-s-fg: #6ee0a0;
+      --eff-m-bg: #3a2c08; --eff-m-fg: #f3c969;
+      --eff-l-bg: #271845; --eff-l-fg: #c4a8ff;
+      --st-done-bg: #12321f; --st-done-fg: #6ee0a0;
+      --st-flight-bg: #16294f; --st-flight-fg: #8fb4ff;
+      --st-planned-bg: #23232f; --st-planned-fg: #a6a6bb;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 940px; margin: 0 auto; padding: 32px 20px 80px; }
+
+  /* Header */
+  header.page { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .title-block h1 { font-size: 2rem; margin: 0 0 6px; letter-spacing: -.02em; }
+  .title-block h1 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); }
+  .subtitle { color: var(--text-muted); margin: 0; max-width: 64ch; font-size: .98rem; }
+  .meta-line { color: var(--text-faint); font-size: .8rem; margin-top: 10px; }
+  .theme-btn {
+    flex: none; cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text-muted); border-radius: 10px; padding: 8px 12px; font-size: .85rem;
+    display: inline-flex; align-items: center; gap: 6px; box-shadow: var(--shadow);
+  }
+  .theme-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  /* Track toggle (segmented control) */
+  .track-toggle {
+    margin-top: 26px; display: inline-flex; padding: 4px; gap: 4px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px;
+  }
+  .track-toggle .seg {
+    cursor: pointer; border: none; background: transparent; color: var(--text-muted);
+    padding: 9px 18px; border-radius: 9px; font-size: .9rem; font-weight: 600; transition: all .15s ease;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .track-toggle .seg .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .track-toggle .seg[data-track="A"] .dot { background: var(--accent); }
+  .track-toggle .seg[data-track="B"] .dot { background: var(--accent-b); }
+  .track-toggle .seg:hover { color: var(--text); }
+  .track-toggle .seg.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+
+  /* Info bands */
+  .band {
+    margin-top: 16px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px 18px; box-shadow: var(--shadow);
+  }
+  .band.hidden { display: none; }
+  details.band summary {
+    cursor: pointer; font-weight: 600; font-size: .95rem; list-style: none;
+    display: flex; align-items: center; gap: 8px;
+  }
+  details.band summary::-webkit-details-marker { display: none; }
+  details.band summary .chev { transition: transform .15s ease; color: var(--text-faint); }
+  details.band[open] summary .chev { transform: rotate(90deg); }
+  .band .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 14px; }
+  @media (max-width: 640px) { .band .cols { grid-template-columns: 1fr; } }
+  .band h4 { margin: 0 0 8px; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); }
+  .band ul { margin: 0; padding-left: 18px; color: var(--text-muted); font-size: .9rem; }
+  .band li { margin-bottom: 4px; }
+  .band p { margin: 0; color: var(--text-muted); font-size: .9rem; }
+  .band p + p { margin-top: 8px; }
+  .band code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  .band .title-row { font-weight: 600; font-size: .95rem; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+  /* Controls */
+  .controls {
+    position: sticky; top: 0; z-index: 5; margin-top: 18px; padding: 14px 0;
+    background: linear-gradient(var(--bg) 70%, transparent);
+    display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center;
+  }
+  .ctl-group { display: flex; align-items: center; gap: 8px; }
+  .ctl-group .lbl { font-size: .78rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
+  .chips { display: flex; gap: 6px; }
+  .chip {
+    cursor: pointer; border: 1px solid var(--border); background: var(--surface);
+    color: var(--text-muted); border-radius: 999px; padding: 5px 12px; font-size: .82rem; transition: all .12s ease;
+  }
+  .chip:hover { color: var(--text); }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .search {
+    flex: 1; min-width: 180px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 10px; padding: 8px 12px; font-size: .9rem;
+  }
+  .search:focus { outline: none; border-color: var(--accent); }
+  .expand-btns { display: flex; gap: 6px; }
+  .mini-btn { cursor: pointer; background: none; border: none; color: var(--accent); font-size: .82rem; padding: 4px 6px; }
+  .mini-btn:hover { text-decoration: underline; }
+
+  /* Phases */
+  .phase { margin-top: 22px; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+  .phase.hidden { display: none; }
+  .phase-head {
+    width: 100%; text-align: left; cursor: pointer; border: none; background: transparent; color: var(--text);
+    padding: 18px 20px; display: flex; align-items: center; gap: 14px;
+  }
+  .phase-head:hover { background: var(--surface-2); }
+  .phase-tag {
+    flex: none; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+  }
+  .phase[data-track="B"] .phase-tag { background: var(--accent-b-soft); color: var(--accent-b); }
+  .phase-titles { flex: 1; }
+  .phase-titles .pt { font-weight: 650; font-size: 1.05rem; }
+  .phase-titles .ps { color: var(--text-muted); font-size: .85rem; }
+  .phase-count { flex: none; color: var(--text-faint); font-size: .8rem; font-variant-numeric: tabular-nums; }
+  .phase-chev { flex: none; color: var(--text-faint); transition: transform .18s ease; }
+  .phase.collapsed .phase-chev { transform: rotate(-90deg); }
+  .phase-body { padding: 4px 16px 16px; display: grid; gap: 10px; }
+  .phase.collapsed .phase-body { display: none; }
+  .phase-empty { color: var(--text-faint); font-size: .88rem; padding: 8px 6px 14px; font-style: italic; }
+
+  /* Cards */
+  .card {
+    border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; background: var(--surface);
+    display: grid; grid-template-columns: 30px 1fr; gap: 4px 14px; align-items: start;
+  }
+  .card.hidden { display: none; }
+  .card-num {
+    grid-row: 1 / span 2; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent);
+    background: var(--accent-soft); border-radius: 8px; width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center; font-size: .9rem;
+  }
+  .phase[data-track="B"] .card-num { color: var(--accent-b); background: var(--accent-b-soft); }
+  .card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .card-title { font-weight: 640; }
+  .card-title code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  .card-why { grid-column: 2; color: var(--text-muted); font-size: .9rem; margin-top: 2px; }
+  .card-why code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  .badge { font-size: .7rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: .02em; white-space: nowrap; }
+  .b-S { background: var(--eff-s-bg); color: var(--eff-s-fg); }
+  .b-M { background: var(--eff-m-bg); color: var(--eff-m-fg); }
+  .b-L { background: var(--eff-l-bg); color: var(--eff-l-fg); }
+  .b-done { background: var(--st-done-bg); color: var(--st-done-fg); }
+  .b-flight { background: var(--st-flight-bg); color: var(--st-flight-fg); }
+  .b-planned { background: var(--st-planned-bg); color: var(--st-planned-fg); }
+  .pillar { font-size: .68rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-faint); white-space: nowrap; }
+
+  /* Prose sections */
+  .prose-grid { margin-top: 30px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 760px) { .prose-grid { grid-template-columns: 1fr; } }
+  .panel { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 18px 20px; box-shadow: var(--shadow); }
+  .panel.full { grid-column: 1 / -1; }
+  .panel h3 { margin: 0 0 12px; font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+  .panel h5 { margin: 14px 0 6px; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-faint); }
+  .panel ol, .panel ul { margin: 0; padding-left: 20px; color: var(--text-muted); font-size: .92rem; }
+  .panel li { margin-bottom: 7px; }
+  .panel li code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+  .panel strong { color: var(--text); }
+
+  .legend { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; font-size: .82rem; color: var(--text-muted); }
+  .legend .grp { display: flex; align-items: center; gap: 7px; }
+
+  footer.page { margin-top: 40px; text-align: center; color: var(--text-faint); font-size: .82rem; }
+  footer.page code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <div class="title-block">
+      <h1><span class="mono">kpm</span> Roadmap</h1>
+      <p class="subtitle">An npm-style package manager for wiki-linked Markdown knowledge bases. The roadmap runs on two tracks: <strong>Substrate &amp; Distribution</strong> (the supply side — packaging, versioning, composition) and <strong>Agent Leverage</strong> (the demand side — retrieval, tools, and an SDK that let agents actually use the knowledge). Use the switcher below.</p>
+      <div class="meta-line">Last updated 2026-06-03 · Synthesized from <code>claude-roadmap.md</code> + <code>codex-roadmap.md</code></div>
+    </div>
+    <button class="theme-btn" id="themeBtn" title="Toggle theme"><span id="themeIcon">🌗</span> <span id="themeLbl">Auto</span></button>
+  </header>
+
+  <div class="track-toggle" id="trackToggle">
+    <button class="seg active" data-track="A"><span class="dot"></span> Track A · Substrate</button>
+    <button class="seg" data-track="B"><span class="dot"></span> Track B · Agent Leverage</button>
+  </div>
+
+  <details class="band" id="bandA" open>
+    <summary><span class="chev">▸</span> Baseline snapshot — state of <code>main</code> <span style="color:var(--text-faint);font-weight:400">(Track A)</span></summary>
+    <div class="cols">
+      <div>
+        <h4>✅ Shipped (baseline)</h4>
+        <ul>
+          <li>Core engine: <code>init</code>, <code>add</code>, <code>install</code>, <code>compose</code>, <code>pack</code>, <code>doctor</code>, <code>audit</code>, <code>describe</code></li>
+          <li>GitHub + <code>file:</code> sources; semver-range resolution against GitHub tags</li>
+          <li>Lockfile install/hydration; transitive walking with singleton-by-name reconciliation</li>
+          <li>Strict wikilink resolution + rewrite; composition into a configurable <code>wiki/</code></li>
+          <li>Bridge adapters (Claude, Codex, Gemini); advisory beta <code>audit</code>; managed agent-context injection</li>
+          <li>OSS/release hygiene: npm metadata, CI gates, governance, README quickstart, prepublish build, CLI <code>--version</code></li>
+        </ul>
+      </div>
+      <div>
+        <h4>🚧 In flight (open branches, folded into NOW)</h4>
+        <ul>
+          <li><code>GITHUB_TOKEN</code> support for GitHub API requests</li>
+          <li>ESLint / Prettier + lint checks in CI</li>
+          <li><code>remove</code> / <code>update</code> commands</li>
+          <li>Repo scaffolding (release checklist, Dependabot, CODEOWNERS, <code>.editorconfig</code>, <code>.nvmrc</code>, changelog)</li>
+        </ul>
+      </div>
+    </div>
+  </details>
+
+  <div class="band hidden" id="bandB">
+    <div class="title-row"><span class="dot" style="width:9px;height:9px;border-radius:50%;background:var(--accent-b);display:inline-block"></span> Track B builds on Track A's primitives</div>
+    <p><strong>Dependency:</strong> Track B's NOW assumes Track A's NEXT primitives — the MCP <code>serve</code> surface and the local query/retrieval index. Start Track B once those land (or co-develop them). All Track B items are <strong>planned</strong> (none in flight yet).</p>
+    <p><strong>Model boundary (invariant #1 preserved):</strong> kpm's retrieval and context primitives are deterministic and <strong>never call a model</strong>. Only the opt-in example agents and the eval harness call models, and they live outside the core. The substrate stays reproducible.</p>
+  </div>
+
+  <div class="controls">
+    <div class="ctl-group">
+      <span class="lbl">Effort</span>
+      <div class="chips" id="effortChips">
+        <button class="chip active" data-val="all">All</button>
+        <button class="chip" data-val="S">S</button>
+        <button class="chip" data-val="M">M</button>
+        <button class="chip" data-val="L">L</button>
+      </div>
+    </div>
+    <div class="ctl-group">
+      <span class="lbl">Status</span>
+      <div class="chips" id="statusChips">
+        <button class="chip active" data-val="all">All</button>
+        <button class="chip" data-val="flight">🚧 In flight</button>
+        <button class="chip" data-val="planned">⬜ Planned</button>
+      </div>
+    </div>
+    <input class="search" id="search" type="search" placeholder="Search items…" />
+    <div class="expand-btns">
+      <button class="mini-btn" id="expandAll">Expand all</button>
+      <button class="mini-btn" id="collapseAll">Collapse all</button>
+    </div>
+  </div>
+
+  <main id="phases"></main>
+
+  <div class="legend">
+    <span class="grp"><strong style="color:var(--text)">Effort:</strong></span>
+    <span class="grp"><span class="badge b-S">S</span> a sitting or two</span>
+    <span class="grp"><span class="badge b-M">M</span> a few sessions</span>
+    <span class="grp"><span class="badge b-L">L</span> multi-week</span>
+    <span class="grp" style="margin-left:10px"><strong style="color:var(--text)">Status:</strong></span>
+    <span class="grp"><span class="badge b-flight">🚧 in flight</span></span>
+    <span class="grp"><span class="badge b-planned">⬜ planned</span></span>
+    <span class="grp" style="color:var(--text-faint)">· Later items are intentionally unestimated</span>
+  </div>
+
+  <div class="prose-grid">
+    <div class="panel">
+      <h3>🧭 Guiding principles (invariants)</h3>
+      <ol>
+        <li><strong>The core never calls an LLM API.</strong> Synthesis stays delegated to spawned CLIs/adapters — reproducibility is the thesis. <em>(Track B respects this: retrieval/context primitives are model-free; only opt-in example agents + the eval harness call models, outside the core.)</em></li>
+        <li><strong>Crisp boundary.</strong> kpm owns mechanics (resolution, locking, hydration, copy, wikilink rewrite, validation, packaging); LLM CLIs / agents own synthesis &amp; reasoning; authors write Markdown.</li>
+        <li><strong>Server-less first.</strong> Registry/discovery/search/hosted-retrieval must work with Git, static JSON, and local indexes before any hosted service.</li>
+        <li><strong>One substrate, two interfaces.</strong> Humans (CLI + Obsidian) and agents (MCP + SDK) read the same vault and lockfile.</li>
+        <li><strong>Determinism &amp; integrity are sacred.</strong> Content/tarball hashing, strict wikilinks, lockfile-as-truth don't regress for convenience.</li>
+        <li><strong>Strict, but with great errors.</strong> Every strictness ships with actionable remediation pointing at the command that fixes it.</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>🚫 Non-goals / guardrails</h3>
+      <ul>
+        <li>Core never embeds an API key or calls a model directly.</li>
+        <li>No hosted infrastructure in Now/Next — server-less first.</li>
+        <li>Don't regress determinism, integrity, or strictness for convenience.</li>
+        <li>Singleton-by-name stays the <strong>default</strong> even after coexistence ships.</li>
+        <li>Not a full npm replacement; not an Obsidian Sync replacement.</li>
+        <li>Not a hosted Markdown <strong>site generator</strong> — export adapters that rewrite link format are in scope; shipping kpm as an SSG is not.</li>
+        <li>No security sandboxing for untrusted content; <code>audit</code> stays advisory.</li>
+        <li>No automatic LLM synthesis that silently modifies package content.</li>
+      </ul>
+      <h5>Track B additionally</h5>
+      <ul>
+        <li>Retrieval/context primitives stay <strong>model-free</strong>; only opt-in agents + eval call models.</li>
+        <li>No hosted retrieval service in Now/Next.</li>
+        <li>Agent write-back never silently mutates packages — <strong>proposals only</strong>.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>🔁 Cross-cutting (continuous)</h3>
+      <ul>
+        <li>Strong vitest coverage for every new command, including error paths.</li>
+        <li>Docs updated per feature; <code>knowledge.json</code> / lock schema changes stay backward-compatible or bump <code>lockfileVersion</code> deliberately.</li>
+        <li>Keep resolution → hydration → composition → synthesis distinct; add a structured command parser before the surface grows unwieldy.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>🎯 Success metrics</h3>
+      <h5>Track A — Substrate</h5>
+      <ul>
+        <li>A new user installs from npm and completes the quickstart <strong>without cloning this repo</strong>.</li>
+        <li>A user installs at least one real GitHub-hosted knowledge package.</li>
+        <li><code>doctor</code> / <code>pack</code> give accurate, actionable feedback; <code>compose</code> is deterministic with no stale output.</li>
+      </ul>
+      <h5>Track B — Agent Leverage</h5>
+      <ul>
+        <li>An agent answers over an installed vault with <strong>correct citations</strong> to <code>package@version</code>.</li>
+        <li><code>kpm eval</code> shows a <strong>measurable task-success lift</strong> from vault context.</li>
+        <li>A mainstream agent framework mounts a kpm vault as a retriever in <strong>&lt; 10 lines</strong>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="page">
+    Synthesized from <code>claude-roadmap.md</code> and <code>codex-roadmap.md</code> on 2026-06-03.
+    The canonical text version is <code>roadmap.md</code>.
+  </footer>
+
+</div>
+
+<script>
+const DATA = [
+  // ===== Track A — Substrate & Distribution =====
+  {
+    track: "A", tag: "Now", title: "Credibility floor + core lifecycle",
+    sub: "Make the first public install credible; make kpm feel like a coherent small package manager.",
+    exit: "Install the alpha from npm and finish the quickstart without cloning · add/remove/list/update with no manual manifest edits · compose deterministic with no stale folders · README states alpha limits.",
+    items: [
+      { n:1, title:"Finish the in-flight baseline", eff:["S"], st:"flight",
+        why:"Merge or intentionally close the open <code>agent/p2-*</code> work: <code>GITHUB_TOKEN</code> auth + 403/rate-limit remediation, ESLint/Prettier in CI, repo scaffolding. Unauthenticated GitHub calls cap at 60 req/hr and block private repos — auth is the highest-leverage." },
+      { n:2, title:"Publish the public npm alpha", eff:["S"], st:"planned",
+        why:"Tool is <code>2.0.0-alpha.1</code> and unpublished. Verify the clean-clone path (<code>npm ci</code> → <code>test</code> → <code>typecheck</code> → <code>pack --dry-run</code>), publish, and switch README from clone-only to <code>npx kpm</code>." },
+      { n:3, title:"One real example + quickstart tutorial", eff:["S"], st:"planned",
+        why:"A small public GitHub repo with a valid <code>knowledge.json</code> (ideally two-package → consumer), plus a tutorial: <code>init</code> → <code>add …#semver:&lt;range&gt;</code> → <code>install</code> → <code>compose --no-bridge</code> → <code>doctor</code>. Cheapest adoption + dogfooding unlock." },
+      { n:4, title:"<code>kpm remove &lt;name&gt;</code>", eff:["S"], st:"flight",
+        why:"The one glaring lifecycle gap — <code>add</code> exists, <code>remove</code> does not. Drop the direct dep → re-resolve → rewrite <code>knowledge.lock</code> → rehydrate <code>knowledge_modules</code> → ensure <code>compose</code> prunes it." },
+      { n:5, title:"<code>kpm list</code>", eff:["S"], st:"planned",
+        why:"Make lockfile state legible without opening JSON: direct + transitive packages with versions, source specs, pinned refs, and overridden specs." },
+      { n:6, title:"<code>kpm outdated</code> + <code>update [name|--all]</code>", eff:["M"], st:"flight", stLabel:"🚧 partly in flight",
+        why:"Fills the deliberate “semver frozen at add” hole explicitly and opt-in. Reuses semver resolution + the original <code>#semver:</code> range in the lock. Make mutable-branch behavior explicit; keep ordinary <code>install</code> lockfile-only and deterministic." },
+      { n:7, title:"Stabilization &amp; honesty pass", eff:["M"], st:"planned",
+        why:"Make <code>add</code> atomic (no half-edited <code>knowledge.json</code> on failure); dedupe materialization; reuse the tarball cache for reads; fix <code>compose</code> pruning (empty-install + scoped/unscoped dirs); fix misleading <code>doctor</code> lockfile-refresh guidance; decide <code>audit.enabled</code> (wire in or drop); add CLI error-path tests." },
+    ]
+  },
+  {
+    track: "A", tag: "Next", title: "Deepen the substrate + authoring/trust",
+    sub: "Ship the agent-facing primitives Track B depends on, and help people create good packages.",
+    exit: "Agents consume the vault over MCP · packages discoverable with no hosted registry · authors get clear pre-publish feedback · audit & doctor have distinct purposes · bridges stay opt-in, validated, replaceable.",
+    items: [
+      { n:1, title:"<code>kpm serve</code> — read-only MCP server", eff:["M"], st:"planned",
+        why:"The differentiating “both” slice: expose the composed vault as MCP resources/tools (list packages, read note, follow link, get index/bridges). Local, no infra — a natural extension of <code>describe</code>. <strong>The foundation Track B builds on.</strong>" },
+      { n:2, title:"Server-less discovery convention", eff:["S","M"], st:"planned",
+        why:"Make packages findable with no registry: standard GitHub topics (<code>kpm-package</code>, <code>knowledge-package</code>, <code>obsidian</code>, <code>markdown</code>) + a curated <code>awesome-kpm</code> index repo; optional <code>kpm search</code> over the topic API." },
+      { n:3, title:"<code>kpm graph</code> export", eff:["S","M"], st:"planned",
+        why:"Emit the dependency + wikilink graph (JSON / Mermaid); highlight singleton overrides and conflicts. Cheap DX win that feeds editor integrations later." },
+      { n:4, title:"Authoring &amp; trust workflows", eff:["M","L"], st:"planned",
+        why:"<code>kpm init --package</code> templates; <code>kpm doctor --publish</code> (entrypoint inclusion, reject mutable refs, validate globs + generated-file boundaries, unsafe-wikilink reporting); expand <code>audit</code> (hidden files, extensions, large/binary files, symlinks, allowlist); strengthen bridge validation (verify output post-adapter, protect user notes)." },
+      { n:5, title:"More sources", eff:["M"], st:"planned",
+        why:"Generalize beyond GitHub: <code>git+https</code> / <code>git+ssh</code>, GitLab, plain HTTPS tarball." },
+      { n:6, title:"Export adapters (pluggable outputs)", eff:["M"], st:"planned",
+        why:"Beyond Obsidian: Logseq, MkDocs/Docusaurus, plain Markdown — by abstracting the link format in the centralized wikilink/resolve layer. A link-rewriting adapter, not a hosted site generator." },
+      { n:7, title:"Smarter, incremental synthesis", eff:["M","L"], st:"planned",
+        why:"Content-address the bridge so unchanged sources skip regeneration; <code>compose --dry-run</code> to preview LLM changes before writing; optional per-package summaries." },
+      { n:8, title:"Watch mode", eff:["M"], st:"planned",
+        why:"<code>compose --watch</code> recomposes on change — a big authoring-DX win." },
+      { n:9, title:"Query / retrieval layer (“ask the vault”)", eff:["L"], st:"planned",
+        why:"<code>kpm search</code> + an MCP <code>search</code> tool over a <strong>local</strong> embedding/keyword index cached in <code>.kpm/</code>. The capstone where kpm stops being a file-copier — and <strong>the index Track B's retrieval stands on.</strong>" },
+    ]
+  },
+  {
+    track: "A", tag: "Later", title: "Ambitious / higher-infra / community-dependent",
+    sub: "Bigger bets that need infrastructure, demonstrated demand, or community.",
+    exit: null,
+    items: [
+      { n:1, title:"Hosted registry + <code>kpm publish</code>", eff:[], st:"planned",
+        why:"What the solo constraint says not to build alone. Bridge until then = the NEXT discovery convention; could start as a static Git-hosted index. Build only once GitHub-native distribution shows real demand." },
+      { n:2, title:"Signing &amp; provenance", eff:[], st:"planned",
+        why:"Sigstore-style signing/verification + SBOM for knowledge graphs." },
+      { n:3, title:"Editor integrations", eff:[], st:"planned",
+        why:"Obsidian plugin / VS Code extension running <code>compose</code> / <code>doctor</code> / <code>serve</code> in-editor." },
+      { n:4, title:"Vault importer", eff:[], st:"planned",
+        why:"<code>kpm init --from &lt;obsidian-vault&gt;</code>: split an existing vault into packages, infer deps from links." },
+      { n:5, title:"Resolution beyond singleton", eff:[], st:"planned",
+        why:"Opt-in namespaced coexistence of conflicting versions + smarter conflict diagnostics. Singleton-by-name stays the default." },
+      { n:6, title:"Collaboration / living knowledge", eff:[], st:"planned",
+        why:"Proposals/review against packages, update notifications. Exploratory — in tension with the immutability thesis, and flagged as such." },
+    ]
+  },
+
+  // ===== Track B — Agent Leverage =====
+  {
+    track: "B", tag: "Now", title: "First usable agent slice (grounded, token-bounded)",
+    sub: "Let an agent ask a vault a question and get cited, budget-aware context back.",
+    exit: "An agent (via MCP or SDK) gets token-bounded, citation-tagged, graph-aware context · every chunk traces to package@version + note path · the retrieval/context path makes no model calls.",
+    items: [
+      { n:1, title:"Deep MCP tool surface", eff:["M"], st:"planned", pillar:"Integration",
+        why:"Turn <code>serve</code> from read-only resources into a real agent <em>toolset</em>: <code>search</code>, <code>get_note</code>, <code>follow_links</code>, <code>get_neighbors</code>, <code>get_index</code>/<code>get_bridges</code>, <code>describe_package</code>. The minimum for an agent to <em>navigate</em> a vault, not just read files." },
+      { n:2, title:"Grounded retrieval with citations", eff:["M"], st:"planned", pillar:"Retrieval",
+        why:"Every retrieval result carries provenance — <code>note → package@version</code> — and supports graph-aware expansion along <code>[[wikilinks]]</code>. Lets agents cite sources and reason over neighborhoods, not isolated chunks." },
+      { n:3, title:"Context-budget packing", eff:["M"], st:"planned", pillar:"Context",
+        why:"<code>kpm context &lt;query&gt; --budget &lt;tokens&gt;</code> + an SDK function returning a token-bounded, relevance-ranked, citation-tagged bundle with progressive disclosure (summary → detail). The core “inject the right knowledge into an agent” primitive." },
+      { n:4, title:"Thin SDK (v0)", eff:["M"], st:"planned", pillar:"Integration",
+        why:"A small published library wrapping load-vault / search / pack-context / cite, so any agent runtime can mount a composed kpm vault as a knowledge source in a few lines. Deterministic, model-free." },
+    ]
+  },
+  {
+    track: "B", tag: "Next", title: "Workflows, framework reach, and trust",
+    sub: "Meet agents where they live, prove the knowledge helps, keep it trustworthy.",
+    exit: "An agent grounded on a vault is measurably better on a task suite (via kpm eval) · answers are faithful to their citations · a mainstream framework mounts a vault in a few lines.",
+    items: [
+      { n:1, title:"Agent-framework adapters", eff:["M"], st:"planned", pillar:"Integration",
+        why:"A Claude Agent SDK skill/tool plus LangChain / LlamaIndex retriever adapters over the SDK. Meet agents where they already are." },
+      { n:2, title:"Grounded Q&amp;A reference agent", eff:["M"], st:"planned", pillar:"Workflows",
+        why:"A runnable example agent in <code>examples/</code> that answers questions over a vault with inline citations. Dogfoods the SDK and doubles as the canonical tutorial." },
+      { n:3, title:"Vault-maintainer agent", eff:["M","L"], st:"planned", pillar:"Workflows",
+        why:"Detects stale, orphaned, or contradictory notes and <strong>proposes</strong> updates as diffs/PRs — never silently writes. Pairs with Track A <code>doctor</code>." },
+      { n:4, title:"Eval harness — <code>kpm eval</code>", eff:["L"], st:"planned", pillar:"Evaluation",
+        why:"Given a task set + a vault, measure whether providing vault context improves an agent's task success vs. a no-context baseline; add grounding/faithfulness checks (does each claim trace to a cited note?). Answers the core question: <em>does this knowledge actually help?</em>" },
+      { n:5, title:"Retrieval ranking quality", eff:["M","L"], st:"planned", pillar:"Retrieval",
+        why:"Hybrid ranking (keyword + embedding + graph centrality), neighborhood-expansion tuning, cross-package dedup. Raises answer quality once the plumbing works." },
+      { n:6, title:"Local usage telemetry (opt-in)", eff:["M"], st:"planned", pillar:"Evaluation",
+        why:"Record which notes/packages agents actually pull (local-only, no infra) to inform pruning, authoring, and ranking." },
+    ]
+  },
+  {
+    track: "B", tag: "Later", title: "Write-path, multi-agent, federation",
+    sub: "Bigger, more exploratory agent capabilities.",
+    exit: null,
+    items: [
+      { n:1, title:"Agent write-back / knowledge proposals", eff:[], st:"planned", pillar:"Workflows",
+        why:"Agents draft new notes or updates as reviewable package proposals (PRs against source repos). Strong tension with the immutability thesis — opt-in, flagged, <strong>never auto-merged</strong>." },
+      { n:2, title:"Multi-agent shared memory", eff:[], st:"planned", pillar:"Workflows",
+        why:"A team of agents sharing one composed vault as common ground, with per-agent context views." },
+      { n:3, title:"Hosted retrieval endpoint", eff:[], st:"planned", pillar:"Integration",
+        why:"If/when a hosted registry exists (Track A Later), an optional hosted query/serve endpoint. Server-less stays the default." },
+      { n:4, title:"Cross-vault federation", eff:[], st:"planned", pillar:"Retrieval",
+        why:"Query and cite across multiple installed vaults / orgs." },
+      { n:5, title:"Learned relevance", eff:[], st:"planned", pillar:"Evaluation",
+        why:"Feedback-driven ranking trained on eval + telemetry signals." },
+    ]
+  },
+];
+
+const ST_META = {
+  flight:  { cls: "b-flight",  label: "🚧 in flight" },
+  planned: { cls: "b-planned", label: "⬜ planned" },
+  done:    { cls: "b-done",    label: "✅ done" },
+};
+
+const phasesEl = document.getElementById("phases");
+
+DATA.forEach(phase => {
+  const sec = document.createElement("section");
+  sec.className = "phase";
+  sec.dataset.track = phase.track;
+  sec.dataset.phase = phase.tag;
+
+  const head = document.createElement("button");
+  head.className = "phase-head";
+  head.innerHTML = `
+    <span class="phase-tag">${phase.tag}</span>
+    <span class="phase-titles">
+      <div class="pt">${phase.title}</div>
+      <div class="ps">${phase.sub}</div>
+    </span>
+    <span class="phase-count" data-count></span>
+    <span class="phase-chev">▾</span>`;
+  head.addEventListener("click", () => sec.classList.toggle("collapsed"));
+  sec.appendChild(head);
+
+  const body = document.createElement("div");
+  body.className = "phase-body";
+
+  phase.items.forEach(it => {
+    const effClasses = it.eff.join(" ");
+    const searchText = (it.title + " " + it.why + " " + (it.pillar||"")).replace(/<[^>]+>/g, "").toLowerCase();
+    const card = document.createElement("div");
+    card.className = "card";
+    card.dataset.effort = effClasses;
+    card.dataset.status = it.st;
+    card.dataset.search = searchText;
+
+    const effBadges = it.eff.map(e => `<span class="badge b-${e}">${e}</span>`).join("");
+    const stm = ST_META[it.st];
+    const stLabel = it.stLabel || stm.label;
+    const stBadge = phase.tag === "Later" ? "" : `<span class="badge ${stm.cls}">${stLabel}</span>`;
+    const pillarTag = it.pillar ? `<span class="pillar">${it.pillar}</span>` : "";
+
+    card.innerHTML = `
+      <div class="card-num">${it.n}</div>
+      <div class="card-head">
+        <span class="card-title">${it.title}</span>
+        ${effBadges}
+        ${stBadge}
+        ${pillarTag}
+      </div>
+      <div class="card-why">${it.why}</div>`;
+    body.appendChild(card);
+  });
+
+  if (phase.exit) {
+    const exit = document.createElement("div");
+    exit.className = "card";
+    exit.style.gridTemplateColumns = "1fr";
+    exit.dataset.effort = "";
+    exit.dataset.status = "exit";
+    exit.dataset.search = phase.exit.toLowerCase();
+    exit.dataset.exit = "1";
+    exit.innerHTML = `<div><span class="badge b-planned">EXIT CRITERIA</span> <span class="card-why" style="margin-top:6px;display:block">${phase.exit}</span></div>`;
+    body.appendChild(exit);
+  }
+
+  const empty = document.createElement("div");
+  empty.className = "phase-empty";
+  empty.textContent = "No items match the current filters.";
+  empty.style.display = "none";
+  body.appendChild(empty);
+
+  sec.appendChild(body);
+  phasesEl.appendChild(sec);
+});
+
+// ---- Filtering ----
+let fTrack = "A", fEffort = "all", fStatus = "all", fSearch = "";
+
+function applyFilters() {
+  document.querySelectorAll(".phase").forEach(sec => {
+    if (sec.dataset.track !== fTrack) { sec.classList.add("hidden"); return; }
+    sec.classList.remove("hidden");
+    let visible = 0, total = 0;
+    sec.querySelectorAll(".card").forEach(card => {
+      if (card.dataset.exit) { // exit-criteria row: show only when no within-track filters active
+        const noFilters = fEffort === "all" && fStatus === "all" && fSearch === "";
+        card.classList.toggle("hidden", !noFilters);
+        return;
+      }
+      total++;
+      const efforts = card.dataset.effort ? card.dataset.effort.split(" ") : [];
+      const effOk = fEffort === "all" || efforts.includes(fEffort);
+      const stOk  = fStatus === "all" || card.dataset.status === fStatus;
+      const sOk   = fSearch === "" || card.dataset.search.includes(fSearch);
+      const show = effOk && stOk && sOk;
+      card.classList.toggle("hidden", !show);
+      if (show) visible++;
+    });
+    const countEl = sec.querySelector("[data-count]");
+    countEl.textContent = visible === total ? `${total} items` : `${visible} / ${total}`;
+    sec.querySelector(".phase-empty").style.display = visible === 0 ? "block" : "none";
+    if (visible === 0 && (fEffort !== "all" || fStatus !== "all" || fSearch !== "")) {
+      sec.classList.add("collapsed");
+    }
+  });
+}
+
+function setTrack(t) {
+  fTrack = t;
+  document.querySelectorAll("#trackToggle .seg").forEach(s => s.classList.toggle("active", s.dataset.track === t));
+  document.getElementById("bandA").classList.toggle("hidden", t !== "A");
+  document.getElementById("bandB").classList.toggle("hidden", t !== "B");
+  applyFilters();
+}
+
+document.getElementById("trackToggle").addEventListener("click", e => {
+  const btn = e.target.closest(".seg");
+  if (btn) setTrack(btn.dataset.track);
+});
+
+function wireChips(groupId, setter) {
+  const group = document.getElementById(groupId);
+  group.addEventListener("click", e => {
+    const btn = e.target.closest(".chip");
+    if (!btn) return;
+    group.querySelectorAll(".chip").forEach(c => c.classList.remove("active"));
+    btn.classList.add("active");
+    setter(btn.dataset.val);
+    applyFilters();
+  });
+}
+wireChips("effortChips", v => fEffort = v);
+wireChips("statusChips", v => fStatus = v);
+document.getElementById("search").addEventListener("input", e => {
+  fSearch = e.target.value.trim().toLowerCase();
+  applyFilters();
+});
+document.getElementById("expandAll").addEventListener("click", () =>
+  document.querySelectorAll(".phase").forEach(s => { if (s.dataset.track === fTrack) s.classList.remove("collapsed"); }));
+document.getElementById("collapseAll").addEventListener("click", () =>
+  document.querySelectorAll(".phase").forEach(s => { if (s.dataset.track === fTrack) s.classList.add("collapsed"); }));
+
+setTrack("A");
+
+// ---- Theme toggle (auto → light → dark, persisted) ----
+const order = ["auto", "light", "dark"];
+const icons = { auto: "🌗", light: "☀️", dark: "🌙" };
+const root = document.documentElement;
+const themeBtn = document.getElementById("themeBtn");
+function setTheme(t) {
+  root.setAttribute("data-theme", t);
+  document.getElementById("themeIcon").textContent = icons[t];
+  document.getElementById("themeLbl").textContent = t.charAt(0).toUpperCase() + t.slice(1);
+  try { localStorage.setItem("kpm-roadmap-theme", t); } catch (e) {}
+}
+let saved = "auto";
+try { saved = localStorage.getItem("kpm-roadmap-theme") || "auto"; } catch (e) {}
+setTheme(saved);
+themeBtn.addEventListener("click", () => {
+  const cur = root.getAttribute("data-theme");
+  setTheme(order[(order.indexOf(cur) + 1) % order.length]);
+});
+</script>
+</body>
+</html>
