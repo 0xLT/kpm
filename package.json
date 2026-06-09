@@ -57,16 +57,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@types/node": "^20.17.6",
+    "@types/node": "^25.9.1",
     "@types/picomatch": "^4.0.0",
     "@types/semver": "^7.7.0",
     "@types/tar": "^7.0.87",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^9.1.2",
     "prettier": "^3.8.3",
-    "typescript": "^5.6.3",
+    "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.0",
-    "vitest": "^4.1.6",
+    "vitest": "^4.1.8",
     "yaml": "^2.9.0"
   }
 }
