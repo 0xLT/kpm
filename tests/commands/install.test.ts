@@ -217,15 +217,161 @@ describe("kpm install / add", () => {
     const project = await makeProject();
     await expect(updateDependencies(project, "@fix/missing")).rejects.toThrow(/not a direct dependency/);
   });
+
+  it("update named dependency fails before resolving when the lockfile is missing", async () => {
+    const project = await makeProject();
+    await writeRootDependencies(project, {
+      "@team/target": "github:team/target#semver:^1.0.0",
+      "@team/stable": "github:team/stable#semver:^1.0.0"
+    });
+    const fetchMock = vi.fn(async () => new Response("unexpected fetch", { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(updateDependencies(project, "@team/target")).rejects.toThrow(
+      /cannot selectively update because @team\/stable is not present in knowledge\.lock/
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("update named dependency fails before resolving when a non-target direct dependency is missing from the lockfile", async () => {
+    const project = await makeProject();
+    await writeRootDependencies(project, {
+      "@team/target": "github:team/target#semver:^1.0.0",
+      "@team/stable": "github:team/stable#semver:^1.0.0"
+    });
+    await writeFile(
+      join(project, "knowledge.lock"),
+      JSON.stringify(
+        {
+          lockfileVersion: 2,
+          root: { name: "@me/root", version: "0.1.0" },
+          packages: {
+            "@team/target": {
+              version: "1.0.0",
+              spec: "github:team/target#semver:^1.0.0",
+              resolved: `https://api.github.com/repos/team/target/tarball/${"1".repeat(40)}`,
+              ref: "v1.0.0",
+              refType: "tag",
+              commit: "1".repeat(40),
+              integrity: "",
+              tarballIntegrity: "",
+              dependencies: {},
+              requestedBy: ["root"]
+            }
+          }
+        },
+        null,
+        2
+      )
+    );
+    const fetchMock = vi.fn(async () => new Response("unexpected fetch", { status: 500 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(updateDependencies(project, "@team/target")).rejects.toThrow(
+      /cannot selectively update because @team\/stable is not present in knowledge\.lock/
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("update named dependency preserves transitives from unchanged direct dependencies", async () => {
+    const project = await makeProject();
+    await writeRootDependencies(project, {
+      "@team/target": "github:team/target#semver:^1.0.0",
+      "@team/stable": "github:team/stable#semver:^1.0.0"
+    });
+
+    const targetOld = "1".repeat(40);
+    const targetNew = "2".repeat(40);
+    const stableOld = "3".repeat(40);
+    const transitiveOld = "4".repeat(40);
+    const transitiveNew = "5".repeat(40);
+
+    stubGithubPackages({
+      "team/target": {
+        tags: ["v1.0.0"],
+        commits: { "v1.0.0": targetOld },
+        tarballs: { [targetOld]: await makePackageTarball("@team/target", "1.0.0") }
+      },
+      "team/stable": {
+        tags: ["v1.0.0"],
+        commits: { "v1.0.0": stableOld },
+        tarballs: {
+          [stableOld]: await makePackageTarball("@team/stable", "1.0.0", {
+            "@team/transitive": "github:team/transitive#semver:^1.0.0"
+          })
+        }
+      },
+      "team/transitive": {
+        tags: ["v1.0.0"],
+        commits: { "v1.0.0": transitiveOld },
+        tarballs: { [transitiveOld]: await makePackageTarball("@team/transitive", "1.0.0") }
+      }
+    });
+    await updateDependencies(project);
+    const initial = JSON.parse(await readFile(join(project, "knowledge.lock"), "utf8"));
+    expect(initial.packages["@team/target"].commit).toBe(targetOld);
+    expect(initial.packages["@team/stable"].commit).toBe(stableOld);
+    expect(initial.packages["@team/transitive"].commit).toBe(transitiveOld);
+
+    vi.unstubAllGlobals();
+    const requests = stubGithubPackages({
+      "team/target": {
+        tags: ["v1.0.0", "v1.0.1"],
+        commits: { "v1.0.1": targetNew },
+        tarballs: { [targetNew]: await makePackageTarball("@team/target", "1.0.1") }
+      },
+      "team/stable": {
+        tags: ["v1.0.0", "v1.0.1"],
+        commits: { "v1.0.1": "6".repeat(40) },
+        tarballs: {
+          [stableOld]: await makePackageTarball("@team/stable", "1.0.0", {
+            "@team/transitive": "github:team/transitive#semver:^1.0.0"
+          })
+        }
+      },
+      "team/transitive": {
+        tags: ["v1.0.0", "v1.0.1"],
+        commits: { "v1.0.1": transitiveNew },
+        tarballs: {
+          [transitiveOld]: await makePackageTarball("@team/transitive", "1.0.0"),
+          [transitiveNew]: await makePackageTarball("@team/transitive", "1.0.1")
+        }
+      }
+    });
+
+    await updateDependencies(project, "@team/target");
+
+    const updated = JSON.parse(await readFile(join(project, "knowledge.lock"), "utf8"));
+    expect(updated.packages["@team/target"].commit).toBe(targetNew);
+    expect(updated.packages["@team/stable"].commit).toBe(stableOld);
+    expect(updated.packages["@team/transitive"].commit).toBe(transitiveOld);
+    expect(requests).not.toContain("https://api.github.com/repos/team/stable/tags?per_page=100");
+    expect(requests).not.toContain("https://api.github.com/repos/team/transitive/tags?per_page=100");
+  });
 });
 
-async function makePackageTarball(name: string, version: string): Promise<Buffer> {
+async function writeRootDependencies(project: string, knowledgeDependencies: Record<string, string>): Promise<void> {
+  await writeFile(
+    join(project, "knowledge.json"),
+    JSON.stringify({ name: "@me/root", version: "0.1.0", type: "knowledge-package", knowledgeDependencies }, null, 2)
+  );
+}
+
+async function makePackageTarball(
+  name: string,
+  version: string,
+  knowledgeDependencies: Record<string, string> = {}
+): Promise<Buffer> {
   const work = await mkdtemp(join(tmpdir(), "kpm-gh-pkg-"));
   const root = join(work, "pkg-root");
   await mkdir(root, { recursive: true });
   await writeFile(
     join(root, "knowledge.json"),
-    JSON.stringify({ name, version, type: "knowledge-package", files: ["**/*.md"], entrypoint: "README.md" }, null, 2)
+    JSON.stringify(
+      { name, version, type: "knowledge-package", files: ["**/*.md"], entrypoint: "README.md", knowledgeDependencies },
+      null,
+      2
+    )
   );
   await writeFile(join(root, "README.md"), `# ${name}\n`);
   const archive = join(work, "package.tgz");
@@ -264,6 +410,51 @@ function stubGithubFetch(
         return new Response(tarball, { status: 200 });
       }
       return new Response(`unexpected url: ${href}`, { status: 500 });
+    })
+  );
+  return requests;
+}
+
+function stubGithubPackages(
+  packages: Record<string, { tags: string[]; commits: Record<string, string>; tarballs: Record<string, Buffer> }>
+): string[] {
+  const requests: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string | URL) => {
+      const href = String(url);
+      requests.push(href);
+      const match = href.match(/\/repos\/([^/]+)\/([^/]+)\/(tags|commits|tarball)(?:\/([^?#]+))?/);
+      if (!match) {
+        return new Response(`unexpected url: ${href}`, { status: 500 });
+      }
+      const [, owner, repo, endpoint, rawRef] = match;
+      const pkg = packages[`${owner}/${repo}`];
+      if (!pkg) {
+        return new Response(`unexpected package: ${owner}/${repo}`, { status: 500 });
+      }
+      if (endpoint === "tags") {
+        return new Response(JSON.stringify(pkg.tags.map((name) => ({ name }))), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        });
+      }
+      const ref = decodeURIComponent(rawRef ?? "");
+      if (endpoint === "commits") {
+        const sha = pkg.commits[ref];
+        if (!sha) {
+          return new Response("not found", { status: 404 });
+        }
+        return new Response(JSON.stringify({ sha }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        });
+      }
+      const tarball = pkg.tarballs[ref];
+      if (!tarball) {
+        return new Response("not found", { status: 404 });
+      }
+      return new Response(tarball, { status: 200 });
     })
   );
   return requests;

@@ -146,7 +146,8 @@ re-resolves and rewrites `knowledge.lock` and `knowledge_modules/`.
 and rewrites the lockfile; dependencies pinned to a tag or commit SHA stay put,
 while `#semver:<range>` and branch refs move to the newest match. `kpm update
 <name>` re-resolves only the named direct dependency, keeping every other direct
-dependency pinned to its current locked commit.
+dependency and its locked dependency chain pinned to the current lockfile
+baseline.
 
 Source specs:
 
