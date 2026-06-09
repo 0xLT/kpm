@@ -78,6 +78,24 @@ describe("doctor", () => {
     expect(report.info.join("\n")).toMatch(/mutable|branch/i);
   });
 
+  it("points missing dependency lockfiles at kpm add instead of lockfile-only install", async () => {
+    const project = await mkdtemp(join(tmpdir(), "kpm-doctor-missing-lock-"));
+    await writeFile(
+      join(project, "knowledge.json"),
+      JSON.stringify({
+        name: "@me/root",
+        version: "0.1.0",
+        type: "knowledge-package",
+        knowledgeDependencies: { "@acme/x": "github:acme/x#v1.0.0" }
+      })
+    );
+
+    const report = await doctor(project);
+
+    expect(report.warnings.join("\n")).toContain("kpm add <source>");
+    expect(report.warnings.join("\n")).not.toContain("kpm install");
+  });
+
   it("warns when a transitive dep was overridden by the root", async () => {
     const project = await mkdtemp(join(tmpdir(), "kpm-doctor-override-"));
     await writeFile(

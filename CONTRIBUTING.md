@@ -52,3 +52,8 @@ Run `npm pack --dry-run` when changing package metadata, files, build output, re
 - Keep command examples aligned with the current CLI.
 - Mark future npm, registry, publish, and graph workflows as future work unless implemented.
 - Be explicit that `kpm audit` is advisory and not a security boundary.
+
+## Changelog and releases
+
+- Record user-visible changes under the `[Unreleased]` section of [CHANGELOG.md](CHANGELOG.md).
+- Maintainers cut releases by following [RELEASING.md](RELEASING.md).

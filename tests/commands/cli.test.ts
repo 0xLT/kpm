@@ -7,8 +7,9 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { main } from "../../src/cli.js";
 
-const pkgVersion = (JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string })
-  .version;
+const pkgVersion = (
+  JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as { version: string }
+).version;
 
 const execFileAsync = promisify(execFile);
 

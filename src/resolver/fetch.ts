@@ -11,6 +11,56 @@ import type { PackageSource } from "./sources.js";
 
 const USER_AGENT = "kpm/2";
 
+function githubAuthToken(): string | undefined {
+  for (const candidate of [process.env.GITHUB_TOKEN, process.env.GH_TOKEN]) {
+    const token = candidate?.trim();
+    if (token) {
+      return token;
+    }
+  }
+  return undefined;
+}
+
+function githubHeaders(accept?: string): Record<string, string> {
+  const headers: Record<string, string> = { "user-agent": USER_AGENT };
+  if (accept) {
+    headers.accept = accept;
+  }
+  const token = githubAuthToken();
+  if (token) {
+    headers.authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+function tarballHeaders(url: string): Record<string, string> {
+  return shouldAuthenticateTarballUrl(url) ? githubHeaders() : { "user-agent": USER_AGENT };
+}
+
+function shouldAuthenticateTarballUrl(rawUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+
+  if (url.protocol !== "https:") {
+    return false;
+  }
+
+  if (url.hostname === "api.github.com") {
+    return /^\/repos\/[^/]+\/[^/]+\/tarball\/[^/]+/.test(url.pathname);
+  }
+  if (url.hostname === "codeload.github.com") {
+    return /^\/[^/]+\/[^/]+\/tar\.(?:gz|zip)\/[^/]+/.test(url.pathname);
+  }
+  if (url.hostname === "github.com") {
+    return /^\/[^/]+\/[^/]+\/archive\//.test(url.pathname);
+  }
+  return false;
+}
+
 export type GitHubTag = {
   name: string;
 };
@@ -31,7 +81,9 @@ export async function materializeSource(source: PackageSource): Promise<Material
   return materializeGithubSource(source);
 }
 
-export async function materializeFileSource(source: Extract<PackageSource, { kind: "file" }>): Promise<MaterializedSource> {
+export async function materializeFileSource(
+  source: Extract<PackageSource, { kind: "file" }>
+): Promise<MaterializedSource> {
   const abs = resolve(source.path);
   await assertDirectory(abs);
   return {
@@ -97,7 +149,9 @@ export async function materializeLockfilePackage(pkg: LockfilePackage): Promise<
   const bytes = await fetchTarballBytes(pkg.resolved);
   const actual = hashBytes(bytes);
   if (pkg.tarballIntegrity && actual !== pkg.tarballIntegrity) {
-    throw new Error(`lockfile tarball integrity mismatch for ${pkg.resolved}: expected ${pkg.tarballIntegrity}, got ${actual}`);
+    throw new Error(
+      `lockfile tarball integrity mismatch for ${pkg.resolved}: expected ${pkg.tarballIntegrity}, got ${actual}`
+    );
   }
   await writeCachedTarball(actual, bytes);
 
@@ -169,10 +223,7 @@ export async function listGithubTags(
 
   while (url) {
     const response = await fetchImpl(url, {
-      headers: {
-        "user-agent": USER_AGENT,
-        accept: "application/vnd.github+json"
-      }
+      headers: githubHeaders("application/vnd.github+json")
     });
     if (!response.ok) {
       throw new Error(`Failed to list GitHub tags for ${owner}/${repo}: GitHub returned ${response.status}`);
@@ -230,10 +281,7 @@ export async function resolveGithubCommit(
 ): Promise<string> {
   const url = `https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`;
   const response = await fetchImpl(url, {
-    headers: {
-      "user-agent": USER_AGENT,
-      accept: "application/vnd.github+json"
-    }
+    headers: githubHeaders("application/vnd.github+json")
   });
   if (!response.ok) {
     throw new Error(`Failed to resolve ${sourceLabel}: GitHub returned ${response.status}`);
@@ -246,7 +294,7 @@ export async function resolveGithubCommit(
 }
 
 export async function fetchTarballBytes(url: string, fetchImpl: typeof fetch = fetch): Promise<Buffer> {
-  const response = await fetchImpl(url, { headers: { "user-agent": USER_AGENT } });
+  const response = await fetchImpl(url, { headers: tarballHeaders(url) });
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.status}`);
   }

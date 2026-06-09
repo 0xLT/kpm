@@ -30,7 +30,9 @@ export async function installFromLockfile(projectRoot: string): Promise<void> {
   if (Object.keys(lock.packages).length === 0) {
     const rootManifest = await readProjectManifest(projectRoot);
     if (Object.keys(rootManifest.knowledgeDependencies).length > 0) {
-      throw new Error("knowledge.lock has no packages; run `kpm add <source>` or regenerate the lockfile intentionally.");
+      throw new Error(
+        "knowledge.lock has no packages; run `kpm add <source>` or regenerate the lockfile intentionally."
+      );
     }
     return;
   }
@@ -55,7 +57,11 @@ export async function updateDependencies(projectRoot: string, name?: string): Pr
   }
 
   if (!name) {
-    await resolveAndWrite(projectRoot, { name: rootManifest.name, version: rootManifest.version }, toRootRequests(deps));
+    await resolveAndWrite(
+      projectRoot,
+      { name: rootManifest.name, version: rootManifest.version },
+      toRootRequests(deps)
+    );
     return;
   }
 

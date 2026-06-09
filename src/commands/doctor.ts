@@ -89,7 +89,7 @@ async function reportLockfileSignals(
 ): Promise<void> {
   if (!(await fileExists(join(projectRoot, "knowledge.lock")))) {
     if (Object.keys(rootManifest.knowledgeDependencies).length > 0) {
-      warnings.push("knowledge.lock not found - run `kpm install` to generate it.");
+      warnings.push("knowledge.lock not found - run `kpm add <source>` to resolve dependencies and generate it.");
     }
     return;
   }
@@ -106,7 +106,9 @@ async function reportLockfileSignals(
         info.push(`${name} is pinned to mutable branch ref "${pkg.ref}" at commit ${pkg.commit.slice(0, 8)}.`);
       }
       for (const override of pkg.overriddenSpecs ?? []) {
-        warnings.push(`${name} was requested as "${override.spec}" by ${override.requestedBy} but resolved to "${pkg.spec}".`);
+        warnings.push(
+          `${name} was requested as "${override.spec}" by ${override.requestedBy} but resolved to "${pkg.spec}".`
+        );
       }
     }
   } catch (error) {

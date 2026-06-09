@@ -79,7 +79,9 @@ export async function buildInstallPlan(
   for (const singleton of singletons.values()) {
     const materialized = materializedBySpec.get(`${singleton.name}::${singleton.source}`);
     if (!materialized) {
-      throw new Error(`internal resolver error: ${singleton.name} resolved to ${singleton.source} but was not materialized`);
+      throw new Error(
+        `internal resolver error: ${singleton.name} resolved to ${singleton.source} but was not materialized`
+      );
     }
     resolved.set(singleton.name, { singleton, ...materialized });
   }

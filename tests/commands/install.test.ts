@@ -379,10 +379,7 @@ async function makePackageTarball(
   return readFile(archive);
 }
 
-function stubGithubFetch(
-  tarball: Buffer,
-  options: { tags: string[]; commits: Record<string, string> }
-): string[] {
+function stubGithubFetch(tarball: Buffer, options: { tags: string[]; commits: Record<string, string> }): string[] {
   const requests: string[] = [];
   vi.stubGlobal(
     "fetch",

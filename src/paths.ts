@@ -5,7 +5,12 @@ export function toPosixPath(path: string): string {
 }
 
 export function normalizePackagePath(path: string): string {
-  return path.replace(/^\.\/+/, "").replace(/^\/+/, "").split("/").filter(Boolean).join("/");
+  return path
+    .replace(/^\.\/+/, "")
+    .replace(/^\/+/, "")
+    .split("/")
+    .filter(Boolean)
+    .join("/");
 }
 
 export function withoutMarkdownExtension(path: string): string {
