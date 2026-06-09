@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { fileExists, readJsonFile } from "../files.js";
 import { isSafeRelativePath } from "../paths.js";
+import { isRecord } from "../util.js";
 import type { KnowledgeManifest } from "../types.js";
 
 const NAME_RE = /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/;
@@ -107,10 +108,6 @@ export function validateKnowledgeManifest(raw: unknown): ValidationResult {
       knowledgeDependencies
     }
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function asString(value: unknown): string {

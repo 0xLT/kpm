@@ -6,8 +6,7 @@ describe("compose adapters", () => {
     registerAdapter({
       name: "stub",
       command: "echo",
-      args: () => ["stub"],
-      env: () => ({})
+      args: () => ["stub"]
     });
     const adapter = getAdapter("stub");
     expect(adapter.name).toBe("stub");

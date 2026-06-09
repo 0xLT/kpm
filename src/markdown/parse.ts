@@ -5,9 +5,10 @@ import remarkParse from "remark-parse";
 import remarkWikiLink from "remark-wiki-link";
 import { visit } from "unist-util-visit";
 import { withoutMarkdownExtension } from "../paths.js";
+import { splitOnce } from "../util.js";
 import type { Heading, ParsedNote, WikiLink } from "../types.js";
 
-const PROCESSOR = unified()
+export const PROCESSOR = unified()
   .use(remarkParse)
   .use(remarkFrontmatter, ["yaml"])
   .use(remarkWikiLink, { aliasDivider: "|" });
@@ -34,7 +35,9 @@ export function parseNote(path: string, source: string): ParsedNote {
 }
 
 export function parseWikiLinkValue(value: string, alias: string | undefined, raw: string): WikiLink {
-  const [targetAndHeading, heading] = splitOnce(value, "#");
+  const [rawTarget, rawHeading] = splitOnce(value, "#");
+  const targetAndHeading = rawTarget.trim();
+  const heading = rawHeading?.trim();
   const parts = targetAndHeading.split("/");
   if (parts.length >= 2 && parts[0].startsWith("@")) {
     return {
@@ -142,12 +145,4 @@ function stripFrontmatterBody(source: string): string {
     return source;
   }
   return source.slice(close + 4).replace(/^\r?\n/, "");
-}
-
-function splitOnce(value: string, separator: string): [string, string | undefined] {
-  const index = value.indexOf(separator);
-  if (index === -1) {
-    return [value.trim(), undefined];
-  }
-  return [value.slice(0, index).trim(), value.slice(index + separator.length).trim()];
 }

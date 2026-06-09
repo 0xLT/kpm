@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { isFileNotFoundError, readJsonFile } from "../files.js";
 import { isSafeRelativePath } from "../paths.js";
+import { isRecord } from "../util.js";
 import type { KpmConfig } from "../types.js";
 
 const ALLOWED_CLIS = new Set<KpmConfig["defaultCli"]>(["claude", "codex", "gemini"]);
@@ -34,8 +35,4 @@ export async function readKpmConfig(root: string): Promise<KpmConfig> {
     throw error;
   });
   return parseKpmConfig(raw);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

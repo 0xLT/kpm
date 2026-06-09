@@ -6,6 +6,7 @@ import semver from "semver";
 import { x as tarExtract } from "tar";
 import { assertDirectory } from "../files.js";
 import { isPathInside } from "../paths.js";
+import { errorMessage } from "../util.js";
 import type { LockfilePackage, LockfileRefType } from "../types.js";
 import type { PackageSource } from "./sources.js";
 
@@ -116,14 +117,8 @@ export async function materializeGithubSource(
   const tarballIntegrity = hashBytes(bytes);
   await writeCachedTarball(tarballIntegrity, bytes);
 
-  const work = await mkdtemp(join(tmpdir(), "kpm-gh-"));
-  const archive = join(work, "package.tgz");
-  await writeFile(archive, bytes);
-  const dest = join(work, "extract");
-  const rootPath = await extractTarball(archive, dest);
-
   return {
-    rootPath,
+    rootPath: await writeAndExtractTarball(bytes, "kpm-gh-"),
     resolvedUrl,
     ref,
     refType,
@@ -155,13 +150,8 @@ export async function materializeLockfilePackage(pkg: LockfilePackage): Promise<
   }
   await writeCachedTarball(actual, bytes);
 
-  const work = await mkdtemp(join(tmpdir(), "kpm-lock-"));
-  const archive = join(work, "package.tgz");
-  await writeFile(archive, bytes);
-  const dest = join(work, "extract");
-  const rootPath = await extractTarball(archive, dest);
   return {
-    rootPath,
+    rootPath: await writeAndExtractTarball(bytes, "kpm-lock-"),
     resolvedUrl: pkg.resolved,
     ref: pkg.ref,
     refType: pkg.refType,
@@ -170,9 +160,22 @@ export async function materializeLockfilePackage(pkg: LockfilePackage): Promise<
   };
 }
 
-export type ExtractOptions = { mustStayInside?: string };
+async function writeAndExtractTarball(bytes: Buffer, tmpLabel: string): Promise<string> {
+  const work = await mkdtemp(join(tmpdir(), tmpLabel));
+  const archive = join(work, "package.tgz");
+  await writeFile(archive, bytes);
+  return extractTarball(archive, join(work, "extract"));
+}
 
-export async function extractTarball(archive: string, dest: string, options: ExtractOptions = {}): Promise<string> {
+/**
+ * Extract `archive` into `dest` and return its single top-level directory.
+ *
+ * Every entry is confined to `dest`: absolute paths, `..` segments, and any
+ * path that resolves outside the destination are rejected. Containment is
+ * always enforced against `dest` itself; there is intentionally no override to
+ * widen or narrow that boundary.
+ */
+export async function extractTarball(archive: string, dest: string): Promise<string> {
   const root = resolve(dest);
   await mkdir(root, { recursive: true });
   let unsafeEntry: Error | undefined;
@@ -182,7 +185,7 @@ export async function extractTarball(archive: string, dest: string, options: Ext
     strict: true,
     filter: (entryPath) => {
       try {
-        assertSafeTarEntry(root, entryPath, options.mustStayInside);
+        assertSafeTarEntry(root, entryPath);
         return true;
       } catch (error) {
         unsafeEntry = error instanceof Error ? error : new Error(String(error));
@@ -202,13 +205,12 @@ export async function extractTarball(archive: string, dest: string, options: Ext
   return join(root, dirs[0].name);
 }
 
-function assertSafeTarEntry(dest: string, entryPath: string, mustStayInside?: string): void {
+function assertSafeTarEntry(dest: string, entryPath: string): void {
   if (isAbsolute(entryPath) || entryPath.split(/[\\/]/).includes("..") || entryPath.includes("\0")) {
     throw new Error(`refusing tar entry with unsafe path: ${entryPath}`);
   }
   const target = resolve(dest, entryPath);
-  const boundary = mustStayInside ? resolve(mustStayInside) : dest;
-  if (!isPathInside(boundary, target)) {
+  if (!isPathInside(dest, target)) {
     throw new Error(`refusing tar entry outside destination: ${entryPath}`);
   }
 }
@@ -260,9 +262,7 @@ export function resolveHighestMatchingSemverTag(tags: GitHubTag[], range: string
       range
     );
   } catch (error) {
-    throw new Error(
-      `Invalid semver range "${range}" for ${sourceLabel}: ${error instanceof Error ? error.message : String(error)}`
-    );
+    throw new Error(`Invalid semver range "${range}" for ${sourceLabel}: ${errorMessage(error)}`);
   }
 
   if (!match) {

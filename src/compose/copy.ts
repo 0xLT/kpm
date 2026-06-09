@@ -1,14 +1,10 @@
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { fileExists, listInstalledPackageRoots, listPackageFiles } from "../files.js";
-import { readKnowledgeManifest } from "../manifest/knowledge.js";
-import { createLinkablePackage, resolveWikiLink, type LinkablePackage } from "../markdown/resolve.js";
+import { fileExists } from "../files.js";
+import { indexInstalledPackages, type IndexedPackage } from "../installed.js";
+import { resolveWikiLink, type LinkablePackage } from "../markdown/resolve.js";
 import { rewriteWikiLinks } from "../markdown/wikilinks.js";
 import type { WikiLink } from "../types.js";
-
-type IndexedPackage = LinkablePackage & {
-  root: string;
-};
 
 export async function copyAndRewrite(projectRoot: string, vault: string): Promise<void> {
   const indexed = await indexInstalledPackages(projectRoot);
@@ -44,16 +40,6 @@ export async function copyAndRewrite(projectRoot: string, vault: string): Promis
       )}`
     );
   }
-}
-
-async function indexInstalledPackages(projectRoot: string): Promise<IndexedPackage[]> {
-  const indexed: IndexedPackage[] = [];
-  for (const root of await listInstalledPackageRoots(projectRoot)) {
-    const manifest = await readKnowledgeManifest(root);
-    const files = await listPackageFiles(root, manifest.files);
-    indexed.push({ ...createLinkablePackage(manifest.name, files), root });
-  }
-  return indexed;
 }
 
 function resolveStrict(
