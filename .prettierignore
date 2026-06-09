@@ -3,4 +3,5 @@ node_modules/
 coverage/
 knowledge_modules/
 .kpm/
+.claude/
 package-lock.json

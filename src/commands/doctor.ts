@@ -89,7 +89,7 @@ async function reportLockfileSignals(
 ): Promise<void> {
   if (!(await fileExists(join(projectRoot, "knowledge.lock")))) {
     if (Object.keys(rootManifest.knowledgeDependencies).length > 0) {
-      warnings.push("knowledge.lock not found - run `kpm install` to generate it.");
+      warnings.push("knowledge.lock not found - run `kpm add <source>` to resolve dependencies and generate it.");
     }
     return;
   }
