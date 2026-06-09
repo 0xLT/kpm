@@ -1,15 +1,6 @@
-import { unified } from "unified";
-import remarkFrontmatter from "remark-frontmatter";
-import remarkParse from "remark-parse";
-import remarkWikiLink from "remark-wiki-link";
 import { visit } from "unist-util-visit";
-import { parseWikiLinkValue, type MarkdownNode } from "./parse.js";
+import { PROCESSOR, parseWikiLinkValue, type MarkdownNode } from "./parse.js";
 import type { WikiLink } from "../types.js";
-
-const PROCESSOR = unified()
-  .use(remarkParse)
-  .use(remarkFrontmatter, ["yaml"])
-  .use(remarkWikiLink, { aliasDivider: "|" });
 
 type Resolver = (link: WikiLink) => string | undefined;
 

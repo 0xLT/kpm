@@ -8,6 +8,7 @@ import { doctor } from "./commands/doctor.js";
 import { initProject } from "./commands/init.js";
 import { installFromLockfile, installNew, removeDependency, updateDependencies } from "./commands/install.js";
 import { packPackage } from "./commands/pack.js";
+import { errorMessage } from "./util.js";
 
 type CommandContext = {
   cwd: string;
@@ -112,7 +113,7 @@ export async function main(argv = process.argv.slice(2), ctx: CommandContext = d
         throw new Error(`Unknown command "${command}". Run kpm --help.`);
     }
   } catch (error) {
-    ctx.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    ctx.stderr.write(`${errorMessage(error)}\n`);
     return 1;
   }
 }

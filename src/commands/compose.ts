@@ -4,6 +4,7 @@ import { copyAndRewrite } from "../compose/copy.js";
 import { runBridge } from "../compose/bridge.js";
 import { readKpmConfig } from "../manifest/config.js";
 import { readLockfile } from "../manifest/lock.js";
+import { errorMessage } from "../util.js";
 
 export type ComposeOptions = {
   fresh?: boolean;
@@ -40,7 +41,7 @@ export async function compose(projectRoot: string, options: ComposeOptions = {})
     await runBridge(projectRoot, { cli: options.cli, packages });
     log("compose complete");
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     log("compose failed at bridge phase - re-run `kpm compose` to retry.");
     log(`  ${message}`);
     throw error;

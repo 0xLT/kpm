@@ -1,3 +1,5 @@
+import { splitOnce } from "../util.js";
+
 export type PackageSource =
   | {
       kind: "github";
@@ -64,12 +66,4 @@ function inferRefType(ref: string): "tag" | "branch" | "sha" {
     return "tag";
   }
   return "branch";
-}
-
-function splitOnce(value: string, separator: string): [string, string | undefined] {
-  const index = value.indexOf(separator);
-  if (index === -1) {
-    return [value, undefined];
-  }
-  return [value.slice(0, index), value.slice(index + separator.length)];
 }

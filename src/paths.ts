@@ -4,7 +4,7 @@ export function toPosixPath(path: string): string {
   return path.replace(/\\/g, "/").split(sep).join("/");
 }
 
-export function normalizePackagePath(path: string): string {
+function normalizePackagePath(path: string): string {
   return path
     .replace(/^\.\/+/, "")
     .replace(/^\/+/, "")

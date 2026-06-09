@@ -4,7 +4,6 @@ export type LlmAdapter = {
   name: string;
   command: string;
   args: (ctx: AdapterContext) => string[];
-  env?: (ctx: AdapterContext) => NodeJS.ProcessEnv;
   stdin?: (ctx: AdapterContext) => string;
 };
 

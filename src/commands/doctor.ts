@@ -1,11 +1,13 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { fileExists, listInstalledPackageRoots, listPackageFiles } from "../files.js";
+import { fileExists, listPackageFiles } from "../files.js";
+import { indexInstalledPackages, type IndexedPackage } from "../installed.js";
 import { readKpmConfig } from "../manifest/config.js";
 import { readKnowledgeManifest } from "../manifest/knowledge.js";
 import { readLockfile } from "../manifest/lock.js";
 import { parseNote } from "../markdown/parse.js";
 import { createLinkablePackage, resolveWikiLink, type LinkablePackage } from "../markdown/resolve.js";
+import { errorMessage } from "../util.js";
 import type { KnowledgeManifest } from "../types.js";
 
 export type DoctorReport = {
@@ -13,11 +15,6 @@ export type DoctorReport = {
   errors: string[];
   warnings: string[];
   info: string[];
-};
-
-type IndexedPackage = LinkablePackage & {
-  root: string;
-  manifest: KnowledgeManifest;
 };
 
 export async function doctor(projectRoot: string): Promise<DoctorReport> {
@@ -39,7 +36,12 @@ export async function doctor(projectRoot: string): Promise<DoctorReport> {
     root: projectRoot,
     manifest: rootManifest
   };
-  const indexedPackages = [rootPackage, ...(await loadInstalledIndex(projectRoot, warnings))];
+  const indexedPackages = [
+    rootPackage,
+    ...(await indexInstalledPackages(projectRoot, (root, error) => {
+      warnings.push(`could not index ${root}: ${errorMessage(error)}`);
+    }))
+  ];
   const packages = new Map<string, LinkablePackage>(indexedPackages.map((pkg) => [pkg.name, pkg]));
 
   await reportLockfileSignals(projectRoot, rootManifest, info, warnings);
@@ -49,20 +51,6 @@ export async function doctor(projectRoot: string): Promise<DoctorReport> {
   }
 
   return { ok: errors.length === 0, errors, warnings, info };
-}
-
-async function loadInstalledIndex(projectRoot: string, warnings: string[]): Promise<IndexedPackage[]> {
-  const indexed: IndexedPackage[] = [];
-  for (const root of await listInstalledPackageRoots(projectRoot)) {
-    try {
-      const manifest = await readKnowledgeManifest(root);
-      const files = await listPackageFiles(root, manifest.files);
-      indexed.push({ ...createLinkablePackage(manifest.name, files), root, manifest });
-    } catch (error) {
-      warnings.push(`could not index ${root}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  return indexed;
 }
 
 async function inspectPackage(
@@ -112,6 +100,6 @@ async function reportLockfileSignals(
       }
     }
   } catch (error) {
-    warnings.push(`could not parse knowledge.lock: ${error instanceof Error ? error.message : String(error)}`);
+    warnings.push(`could not parse knowledge.lock: ${errorMessage(error)}`);
   }
 }
