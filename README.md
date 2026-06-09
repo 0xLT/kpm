@@ -126,7 +126,9 @@ kpm --help
 kpm --version | kpm -v
 kpm init [--name @scope/project]
 kpm add github:owner/repo[#ref|#semver:<range>] | file:/path/to/package
+kpm remove <name>
 kpm install
+kpm update [name]
 kpm compose [--fresh] [--no-bridge] [--cli claude|codex|gemini]
 kpm pack [--out path]
 kpm doctor
@@ -134,7 +136,7 @@ kpm audit
 kpm describe --to AGENTS.md
 ```
 
-There is no `build`, `graph`, `remove`, or standalone `update` command in v2.
+There is no `build` or `graph` command in v2.
 `kpm install` hydrates from the existing lockfile; it does not re-resolve manual
 `knowledge.json` dependency edits when `knowledge.lock` already has packages.
 `kpm add` is the command that re-resolves the dependency graph and rewrites both
@@ -143,6 +145,16 @@ There is no `build`, `graph`, `remove`, or standalone `update` command in v2.
 `kpm init` writes `knowledge.json` and `kpm.config.json` if they are missing,
 does not generate a package README, and idempotently merges `knowledge_modules/`,
 `wiki/`, and `.kpm/` into `.gitignore` without removing existing entries.
+
+`kpm remove <name>` drops a direct dependency from `knowledge.json`, then
+re-resolves and rewrites `knowledge.lock` and `knowledge_modules/`.
+
+`kpm update` re-resolves every direct dependency from its `knowledge.json` spec
+and rewrites the lockfile; dependencies pinned to a tag or commit SHA stay put,
+while `#semver:<range>` and branch refs move to the newest match. `kpm update
+<name>` re-resolves only the named direct dependency, keeping every other direct
+dependency and its locked dependency chain pinned to the current lockfile
+baseline.
 
 Source specs:
 

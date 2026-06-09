@@ -21,9 +21,14 @@ export type InstallPlan = {
   singletons: Map<string, ResolvedPackage>;
 };
 
+export type DependencySourceOverride = (request: DependencyRequest) => string;
+
 type MaterializedPackage = Omit<ResolvedPackage, "singleton">;
 
-export async function buildInstallPlan(initial: DependencyRequest[]): Promise<InstallPlan> {
+export async function buildInstallPlan(
+  initial: DependencyRequest[],
+  options: { overrideDependencySource?: DependencySourceOverride } = {}
+): Promise<InstallPlan> {
   const queue: DependencyRequest[] = [...initial];
   const allRequests: DependencyRequest[] = [];
   const seenRequests = new Set<string>();
@@ -57,10 +62,14 @@ export async function buildInstallPlan(initial: DependencyRequest[]): Promise<In
     });
 
     for (const [depName, depSpec] of Object.entries(manifest.knowledgeDependencies)) {
-      queue.push({
+      const dependencyRequest = {
         name: depName,
         source: normalizeFileSpec(depSpec, source),
         requestedBy: manifest.name
+      };
+      queue.push({
+        ...dependencyRequest,
+        source: options.overrideDependencySource?.(dependencyRequest) ?? dependencyRequest.source
       });
     }
   }

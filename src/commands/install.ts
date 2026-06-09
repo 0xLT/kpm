@@ -4,7 +4,8 @@ import { canonicalContentHash, copyDirectory, writeJsonFile } from "../files.js"
 import { readKnowledgeManifest, readProjectManifest } from "../manifest/knowledge.js";
 import { readLockfile, writeLockfile } from "../manifest/lock.js";
 import { materializeLockfilePackage, materializeSource } from "../resolver/fetch.js";
-import { buildInstallPlan } from "../resolver/plan.js";
+import { buildInstallPlan, type DependencySourceOverride } from "../resolver/plan.js";
+import type { DependencyRequest } from "../resolver/singleton.js";
 import { parsePackageSource } from "../resolver/sources.js";
 import { warnMutableRef } from "../resolver/warnings.js";
 import type { KnowledgeManifest, Lockfile, LockfilePackage } from "../types.js";
@@ -38,16 +39,104 @@ export async function installFromLockfile(projectRoot: string): Promise<void> {
   await hydrateFromLockfile(projectRoot, lock);
 }
 
-async function reinstall(projectRoot: string, rootManifest: KnowledgeManifest): Promise<void> {
-  const initial = Object.entries(rootManifest.knowledgeDependencies).map(([name, source]) => ({
-    name,
-    source,
+export async function removeDependency(projectRoot: string, name: string): Promise<void> {
+  const rootManifest = await readKnowledgeManifest(projectRoot);
+  if (!rootManifest.knowledgeDependencies[name]) {
+    throw new Error(`${name} is not a direct dependency in knowledge.json`);
+  }
+  delete rootManifest.knowledgeDependencies[name];
+  await writeJsonFile(join(projectRoot, "knowledge.json"), stripDefaults(rootManifest));
+  await reinstall(projectRoot, rootManifest);
+}
+
+export async function updateDependencies(projectRoot: string, name?: string): Promise<void> {
+  const rootManifest = await readKnowledgeManifest(projectRoot);
+  const deps = rootManifest.knowledgeDependencies;
+  if (name && !deps[name]) {
+    throw new Error(`${name} is not a direct dependency in knowledge.json`);
+  }
+
+  if (!name) {
+    await resolveAndWrite(
+      projectRoot,
+      { name: rootManifest.name, version: rootManifest.version },
+      toRootRequests(deps)
+    );
+    return;
+  }
+
+  const lock = await readLockfile(projectRoot);
+  const preservedPackages = new Set<string>();
+  const initial = Object.entries(deps).map(([depName, source]) => ({
+    name: depName,
+    source: depName === name ? source : preservePackage(depName, lock, preservedPackages),
     requestedBy: "root"
   }));
-  const plan = await buildInstallPlan(initial);
+  await resolveAndWrite(projectRoot, { name: rootManifest.name, version: rootManifest.version }, initial, {
+    overrideDependencySource: preserveLockedDependencySource(lock, preservedPackages)
+  });
+}
+
+async function reinstall(projectRoot: string, rootManifest: KnowledgeManifest): Promise<void> {
+  await resolveAndWrite(
+    projectRoot,
+    { name: rootManifest.name, version: rootManifest.version },
+    toRootRequests(rootManifest.knowledgeDependencies)
+  );
+}
+
+function toRootRequests(deps: Record<string, string>): DependencyRequest[] {
+  return Object.entries(deps).map(([name, source]) => ({ name, source, requestedBy: "root" }));
+}
+
+function preservePackage(name: string, lock: Lockfile, preservedPackages: Set<string>): string {
+  const source = pinnedSpec(name, lock.packages[name]);
+  preservedPackages.add(name);
+  return source;
+}
+
+function preserveLockedDependencySource(lock: Lockfile, preservedPackages: Set<string>): DependencySourceOverride {
+  return (request) => {
+    if (!preservedPackages.has(request.requestedBy)) {
+      return request.source;
+    }
+    return preservePackage(request.name, lock, preservedPackages);
+  };
+}
+
+function pinnedSpec(name: string, lockEntry: LockfilePackage | undefined): string {
+  if (!lockEntry) {
+    throw new Error(
+      `cannot selectively update because ${name} is not present in knowledge.lock; run \`kpm update\` to regenerate all dependencies.`
+    );
+  }
+  if (lockEntry.resolved.startsWith("file:")) {
+    return lockEntry.resolved;
+  }
+  if (!lockEntry.commit) {
+    throw new Error(
+      `cannot selectively update because ${name} has no commit in knowledge.lock; run \`kpm update\` to regenerate all dependencies.`
+    );
+  }
+  const match = lockEntry.resolved.match(/^https:\/\/api\.github\.com\/repos\/([^/]+)\/([^/]+)\/tarball\/[^/?#]+$/);
+  if (!match) {
+    throw new Error(
+      `cannot selectively update because ${name} has an unsupported resolved URL in knowledge.lock; run \`kpm update\` to regenerate all dependencies.`
+    );
+  }
+  return `github:${match[1]}/${match[2]}#${lockEntry.commit}`;
+}
+
+async function resolveAndWrite(
+  projectRoot: string,
+  root: { name: string; version: string },
+  initial: DependencyRequest[],
+  options: { overrideDependencySource?: DependencySourceOverride } = {}
+): Promise<void> {
+  const plan = await buildInstallPlan(initial, options);
   const lock: Lockfile = {
     lockfileVersion: 2,
-    root: { name: rootManifest.name, version: rootManifest.version },
+    root,
     packages: {}
   };
 
