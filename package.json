@@ -26,7 +26,8 @@
   "type": "module",
   "files": [
     "dist/**/*.js",
-    "README.md"
+    "README.md",
+    "examples/**"
   ],
   "bin": {
     "kpm": "./dist/cli.js"
@@ -38,7 +39,8 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test && npm run typecheck"
+    "prepublishOnly": "npm test && npm run typecheck",
+    "smoke:examples": "node examples/smoke.mjs"
   },
   "engines": {
     "node": ">=20"

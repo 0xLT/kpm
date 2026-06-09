@@ -119,6 +119,22 @@ Use a real repository that contains a valid `knowledge.json`. For publishable
 packages, prefer tags, commit SHAs, or `#semver:<range>` over mutable branch refs
 such as `#main`.
 
+## Public examples
+
+Small, copy-pastable public examples live under [examples/](examples/):
+
+- [examples/minimal-package/](examples/minimal-package/) is a valid knowledge package with local wikilinks.
+- [examples/consumer-project/](examples/consumer-project/) is an end-to-end walkthrough for `init`, `add file:`, `install`, `compose --no-bridge`, `doctor`, and `describe`.
+
+To validate the walkthrough from a built clone:
+
+```bash
+npm run build
+npm run smoke:examples
+```
+
+The tutorial also notes the equivalent pinned GitHub source shape for public repositories. It does not document registry publish or search commands because those flows are not implemented yet.
+
 ## Commands
 
 ```bash
