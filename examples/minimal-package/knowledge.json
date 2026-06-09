@@ -1,0 +1,9 @@
+{
+  "name": "@kpm-examples/ai-notes",
+  "version": "0.1.0",
+  "description": "Tiny linked notes that demonstrate a kpm knowledge package.",
+  "license": "MIT",
+  "type": "knowledge-package",
+  "files": ["README.md", "notes/**/*.md"],
+  "entrypoint": "README.md"
+}
