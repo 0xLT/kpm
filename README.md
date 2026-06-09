@@ -63,8 +63,8 @@ binary name is `kpm`.
 
 ## 5-minute quickstart
 
-This quickstart creates an empty knowledge package, validates it, and composes an
-empty local vault without invoking an LLM bridge.
+This quickstart creates an empty knowledge package, validates it, and runs the
+compose flow without invoking an LLM bridge.
 
 ```bash
 # From a built clone of this repository.
@@ -88,13 +88,14 @@ Composed vault.
 Expected project files for the empty-package quickstart:
 
 ```text
-.gitignore
+.gitignore             # includes knowledge_modules/, wiki/, and .kpm/
 knowledge.json        # package contract
 kpm.config.json       # local consumer policy
 ```
 
 Because this package has no dependencies yet, `compose --no-bridge` prints the
-vault target but does not need to copy any package files.
+vault target but does not create `wiki/` or copy any package files. Add at least
+one package dependency before expecting composed vault content.
 
 A fresh `knowledge.json` looks like this:
 
@@ -121,6 +122,8 @@ such as `#main`.
 ## Commands
 
 ```bash
+kpm --help
+kpm --version | kpm -v
 kpm init [--name @scope/project]
 kpm add github:owner/repo[#ref|#semver:<range>] | file:/path/to/package
 kpm install
@@ -137,12 +140,19 @@ There is no `build`, `graph`, `remove`, or standalone `update` command in v2.
 `kpm add` is the command that re-resolves the dependency graph and rewrites both
 `knowledge.json` and `knowledge.lock`.
 
+`kpm init` writes `knowledge.json` and `kpm.config.json` if they are missing,
+does not generate a package README, and idempotently merges `knowledge_modules/`,
+`wiki/`, and `.kpm/` into `.gitignore` without removing existing entries.
+
 Source specs:
 
 - `github:owner/repo[#ref]` fetches a GitHub tarball. If `#ref` is omitted,
   `HEAD` is used and treated as a mutable branch ref.
 - Refs that look like `v1.2.3` or `1.2.3` are treated as tags, 7-40 character
   hex refs are treated as SHAs, and everything else is treated as a branch.
+  For tag-like refs, kpm checks the numeric `x.y.z` portion against the
+  installed package's `knowledge.json` version; for example, `#v1.2.3` requires
+  manifest version `1.2.3`.
 - `github:owner/repo#semver:<range>` resolves the range against GitHub tags
   during `kpm add` or intentional lockfile regeneration. Tags such as `v0.2.4`
   and `0.2.4` are accepted for comparison, and the highest satisfying tag is
@@ -201,6 +211,8 @@ and must be included by the publish globs for `kpm pack` to succeed.
 ```
 
 If `kpm.config.json` is missing, commands use the same defaults shown above.
+`audit.enabled` is parsed and preserved as reserved policy, but the current
+`kpm audit` command does not read it and only runs when invoked directly.
 Fetched GitHub tarballs are cached globally under `~/.kpm/cache/`.
 
 `knowledge.lock` records the resolved graph: exact versions, winning specs,
@@ -224,17 +236,19 @@ tarball URL, and integrity values in `knowledge.lock`. Later `kpm install` runs
 only from that exact lockfile metadata and does not list tags or choose a newer
 matching version.
 
-`kpm compose` creates the vault:
+`kpm compose` builds the vault from the packages currently present in
+`knowledge_modules/`:
 
 1. Copies installed packages into `<vault>/<scope>/<name>/`.
 2. Rewrites wikilinks to vault-absolute paths.
-3. Prunes package folders no longer present in the lockfile.
+3. Prunes stale scoped package folders no longer present in `knowledge_modules/`.
 4. Runs the configured LLM adapter unless `--no-bridge` is set.
 
 Use `--fresh` to wipe the vault before recomposing. Incremental compose clears
 derived package folders but preserves generated bridge files and user-authored
 notes outside copied package folders. If the lockfile has no packages, compose
-skips the bridge phase.
+skips the bridge phase. If `knowledge_modules/` is empty, the copy phase exits
+without creating or pruning the vault.
 
 ## Wikilink rules
 
@@ -261,7 +275,7 @@ Built-in adapters:
 adapter is spawned with `cwd` set to the vault and the kpm-owned bridge prompt
 piped to stdin. Adapter output is logged to `.kpm/logs/compose-<timestamp>.log`.
 
-Generated files must include:
+The bridge prompt tells adapters to include this frontmatter on generated files:
 
 ```yaml
 ---
@@ -275,6 +289,9 @@ kpm-sources: ["@team/react-guide", "@team/sql-guide"]
 When the bridge phase runs, `kpm compose` refuses to proceed if existing
 `wiki/index.md` or `wiki/bridges/*.md` files lack `kpm-generated: true`. After
 the adapter exits, kpm verifies that `wiki/index.md` exists and has that marker.
+It currently reads `kpm-sources` to avoid regenerating known bridge pairs, but it
+does not validate `kpm-generator`, `kpm-generated-at`, or every new
+`wiki/bridges/*.md` file after adapter execution.
 
 ## Pack, doctor, and audit
 
@@ -290,13 +307,16 @@ for publishable packages.
 
 `kpm audit` is beta advisory signal only. It scans installed packages for
 unexpected file extensions and large text-like files, but it is not a security
-boundary and must not be relied on as one.
+boundary and must not be relied on as one. It runs when invoked regardless of
+the reserved `audit.enabled` value in `kpm.config.json`.
 
 ## Agent file injection
 
-`kpm describe --to AGENTS.md` injects a marker-wrapped summary of the composed
-vault into the selected file. It is opt-in and updates only the managed block on
-rerun.
+`kpm describe --to AGENTS.md` injects a marker-wrapped package-context block into
+the selected file. It reads `knowledge.json`, `kpm.config.json`, and
+`knowledge.lock`, lists installed packages from the lockfile, and points agents
+at the configured vault path. It does not inspect `wiki/` contents. The command
+is opt-in and updates only the managed block on rerun.
 
 ```markdown
 <!-- BEGIN KPM-CONTEXT -->
