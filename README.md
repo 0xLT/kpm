@@ -320,7 +320,9 @@ is opt-in and updates only the managed block on rerun.
 
 ```markdown
 <!-- BEGIN KPM-CONTEXT -->
+
 ...
+
 <!-- END KPM-CONTEXT -->
 ```
 

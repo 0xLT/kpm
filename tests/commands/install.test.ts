@@ -181,10 +181,7 @@ async function makePackageTarball(name: string, version: string): Promise<Buffer
   return readFile(archive);
 }
 
-function stubGithubFetch(
-  tarball: Buffer,
-  options: { tags: string[]; commits: Record<string, string> }
-): string[] {
+function stubGithubFetch(tarball: Buffer, options: { tags: string[]; commits: Record<string, string> }): string[] {
   const requests: string[] = [];
   vi.stubGlobal(
     "fetch",

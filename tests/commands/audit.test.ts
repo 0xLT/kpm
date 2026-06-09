@@ -9,7 +9,10 @@ describe("audit (beta)", () => {
     const project = await mkdtemp(join(tmpdir(), "kpm-audit-"));
     const pkg = join(project, "knowledge_modules", "@x", "y");
     await mkdir(pkg, { recursive: true });
-    await writeFile(join(pkg, "knowledge.json"), JSON.stringify({ name: "@x/y", version: "0.1.0", type: "knowledge-package" }));
+    await writeFile(
+      join(pkg, "knowledge.json"),
+      JSON.stringify({ name: "@x/y", version: "0.1.0", type: "knowledge-package" })
+    );
     await writeFile(join(pkg, "README.md"), "# y\n");
     await writeFile(join(pkg, "weird.bin"), "binary-looking");
     const report = await audit(project);

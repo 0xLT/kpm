@@ -106,7 +106,9 @@ async function reportLockfileSignals(
         info.push(`${name} is pinned to mutable branch ref "${pkg.ref}" at commit ${pkg.commit.slice(0, 8)}.`);
       }
       for (const override of pkg.overriddenSpecs ?? []) {
-        warnings.push(`${name} was requested as "${override.spec}" by ${override.requestedBy} but resolved to "${pkg.spec}".`);
+        warnings.push(
+          `${name} was requested as "${override.spec}" by ${override.requestedBy} but resolved to "${pkg.spec}".`
+        );
       }
     }
   } catch (error) {

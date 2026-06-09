@@ -16,9 +16,7 @@ const KNOWN_KEYS = new Set([
   "knowledgeDependencies"
 ]);
 
-export type ValidationResult =
-  | { ok: true; manifest: KnowledgeManifest }
-  | { ok: false; errors: string[] };
+export type ValidationResult = { ok: true; manifest: KnowledgeManifest } | { ok: false; errors: string[] };
 
 export function parseKnowledgeManifest(raw: unknown): KnowledgeManifest {
   const result = validateKnowledgeManifest(raw);
@@ -137,8 +135,10 @@ function asStringRecord(value: unknown): Record<string, string> {
 }
 
 function stripGlob(pattern: string): string {
-  return pattern
-    .split("/")
-    .filter((segment) => !segment.includes("*"))
-    .join("/") || ".";
+  return (
+    pattern
+      .split("/")
+      .filter((segment) => !segment.includes("*"))
+      .join("/") || "."
+  );
 }

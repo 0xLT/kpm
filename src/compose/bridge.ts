@@ -35,7 +35,11 @@ Use only Obsidian-compatible [[wikilinks]]. Never modify package subfolders. Nev
 export type BridgeOptions = {
   cli?: string;
   packages: string[];
-  runProcess?: (command: string, args: string[], opts: { cwd: string; stdin: string; logPath: string }) => Promise<void>;
+  runProcess?: (
+    command: string,
+    args: string[],
+    opts: { cwd: string; stdin: string; logPath: string }
+  ) => Promise<void>;
 };
 
 export type BridgePromptInputs = {
@@ -100,7 +104,9 @@ async function inspectGeneratableTargets(vaultPath: string): Promise<Array<{ sou
   const indexPath = join(vaultPath, "index.md");
   const indexMarker = await readGeneratedMarker(indexPath);
   if (indexMarker && !indexMarker.isGenerated) {
-    throw new Error(`${indexPath} is user-authored (no kpm-generated marker). Rename or delete it to allow kpm to regenerate.`);
+    throw new Error(
+      `${indexPath} is user-authored (no kpm-generated marker). Rename or delete it to allow kpm to regenerate.`
+    );
   }
 
   const bridgesDir = join(vaultPath, "bridges");
@@ -116,7 +122,9 @@ async function inspectGeneratableTargets(vaultPath: string): Promise<Array<{ sou
     const path = join(bridgesDir, entry.name);
     const marker = await readGeneratedMarker(path);
     if (!marker?.isGenerated) {
-      throw new Error(`${path} is user-authored (no kpm-generated marker). Rename or delete it to allow kpm to regenerate.`);
+      throw new Error(
+        `${path} is user-authored (no kpm-generated marker). Rename or delete it to allow kpm to regenerate.`
+      );
     }
     if (marker.sources.length > 0) {
       alreadyBridged.push({ sources: marker.sources, file: `bridges/${entry.name}` });

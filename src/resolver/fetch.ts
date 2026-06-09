@@ -81,7 +81,9 @@ export async function materializeSource(source: PackageSource): Promise<Material
   return materializeGithubSource(source);
 }
 
-export async function materializeFileSource(source: Extract<PackageSource, { kind: "file" }>): Promise<MaterializedSource> {
+export async function materializeFileSource(
+  source: Extract<PackageSource, { kind: "file" }>
+): Promise<MaterializedSource> {
   const abs = resolve(source.path);
   await assertDirectory(abs);
   return {
@@ -147,7 +149,9 @@ export async function materializeLockfilePackage(pkg: LockfilePackage): Promise<
   const bytes = await fetchTarballBytes(pkg.resolved);
   const actual = hashBytes(bytes);
   if (pkg.tarballIntegrity && actual !== pkg.tarballIntegrity) {
-    throw new Error(`lockfile tarball integrity mismatch for ${pkg.resolved}: expected ${pkg.tarballIntegrity}, got ${actual}`);
+    throw new Error(
+      `lockfile tarball integrity mismatch for ${pkg.resolved}: expected ${pkg.tarballIntegrity}, got ${actual}`
+    );
   }
   await writeCachedTarball(actual, bytes);
 

@@ -24,10 +24,10 @@ wikilink rewriting; authors just write ordinary Markdown with `[[wikilinks]]`.
 kpm's roadmap advances on two distinct but connected tracks. The shared north
 star, invariants, and effort key below apply to both.
 
-- **Track A — Substrate & Distribution** *(the supply side).* The package-manager
+- **Track A — Substrate & Distribution** _(the supply side)._ The package-manager
   plumbing: build, version, lock, compose, discover, and (eventually) publish
   knowledge packages. This is "make kpm a real package manager."
-- **Track B — Agent Leverage** *(the demand side).* The tools, retrieval, and SDK
+- **Track B — Agent Leverage** _(the demand side)._ The tools, retrieval, and SDK
   that let **agents** consume and act on the composed knowledge. This is "make
   the knowledge actually usable by agents." Track B **builds on top of** Track A's
   primitives — the MCP `serve` surface, the local query/retrieval index, and
@@ -85,7 +85,7 @@ index). **Track B** then turns those primitives into real leverage.
 
 **Resourcing — solo / nights & weekends.** Favor small, high-leverage
 increments. Reframe anything that smells like "run a hosted service" into
-server-less forms, and push true infrastructure to *Later* (ideally
+server-less forms, and push true infrastructure to _Later_ (ideally
 community-funded).
 
 ---
@@ -103,7 +103,7 @@ community-funded).
    Markdown.
 3. **Server-less first.** Anything resembling "registry / discovery / search /
    hosted retrieval" must work with Git repos, static JSON, and local indexes
-   before any hosted service. Hosted infra is *Later*.
+   before any hosted service. Hosted infra is _Later_.
 4. **One substrate, two interfaces.** Humans consume the vault via CLI +
    Obsidian; agents via MCP + the SDK. Both read the same vault and lockfile.
 5. **Determinism & integrity are sacred.** Content/tarball hashing, strict
@@ -126,15 +126,15 @@ discovery, publishing._
 _Sequenced; ship incrementally. Goal: make the first public install credible and
 make kpm feel like a coherent small package manager._
 
-| # | Item | Why | Effort | Status |
-|---|------|-----|--------|--------|
-| 1 | **Finish the in-flight baseline** | Merge or intentionally close the open `agent/p2-*` work: `GITHUB_TOKEN` auth + rate-limit/403 remediation, ESLint/Prettier in CI, repo scaffolding. Unauthenticated GitHub calls cap at 60 req/hr and block private repos — auth is the highest-leverage of these. | S | 🚧 in flight |
-| 2 | **Publish the public npm alpha** | The tool is `2.0.0-alpha.1` and unpublished. Verify the clean-clone path (`npm ci` → `npm test` → `npm run typecheck` → `npm pack --dry-run`), publish, and switch README from clone-only to `npx kpm` / published-alpha install. | S | planned |
-| 3 | **One real example + quickstart tutorial** | A small public GitHub repo with a valid `knowledge.json` (ideally a two-package → consumer graph), plus an end-to-end tutorial: `init` → `add github:…#semver:<range>` → `install` → `compose --no-bridge` → `doctor`. Cheapest adoption *and* dogfooding unlock. | S | planned |
-| 4 | **`kpm remove <name>`** | The one glaring lifecycle gap — `add` exists, `remove` does not. Drop the direct dep from `knowledge.json` → re-resolve → rewrite `knowledge.lock` → rehydrate `knowledge_modules` → ensure `compose` prunes the removed package. | S | 🚧 in flight |
-| 5 | **`kpm list`** | Make lockfile state legible without opening JSON: show direct + transitive packages with versions, source specs, pinned refs, and overridden specs. | S | planned |
-| 6 | **`kpm outdated` + `kpm update [name\|--all]`** | Fills the deliberate "semver frozen at `add`" hole *explicitly and opt-in*. Reuses existing semver resolution + the original `#semver:` range stored in the lock. Make mutable-branch behavior explicit; keep ordinary `install` lockfile-only and deterministic. | M | 🚧 partly in flight |
-| 7 | **Stabilization & honesty pass** | Make `add` atomic (resolution failure must not leave `knowledge.json` edited while lock/modules go stale); dedupe materialization of the package being added; reuse the tarball cache for reads, not just writes; fix `compose` pruning (including the empty-install case and scoped/unscoped dirs); fix misleading `doctor` lockfile-refresh guidance (point at the command that re-resolves); decide `audit.enabled` (wire it in or drop it from generated config); add CLI error-path tests (missing args, unknown commands/flags, doctor/audit output). | M | planned |
+| #   | Item                                            | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Effort | Status              |
+| --- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------- |
+| 1   | **Finish the in-flight baseline**               | Merge or intentionally close the open `agent/p2-*` work: `GITHUB_TOKEN` auth + rate-limit/403 remediation, ESLint/Prettier in CI, repo scaffolding. Unauthenticated GitHub calls cap at 60 req/hr and block private repos — auth is the highest-leverage of these.                                                                                                                                                                                                                                                                                          | S      | 🚧 in flight        |
+| 2   | **Publish the public npm alpha**                | The tool is `2.0.0-alpha.1` and unpublished. Verify the clean-clone path (`npm ci` → `npm test` → `npm run typecheck` → `npm pack --dry-run`), publish, and switch README from clone-only to `npx kpm` / published-alpha install.                                                                                                                                                                                                                                                                                                                           | S      | planned             |
+| 3   | **One real example + quickstart tutorial**      | A small public GitHub repo with a valid `knowledge.json` (ideally a two-package → consumer graph), plus an end-to-end tutorial: `init` → `add github:…#semver:<range>` → `install` → `compose --no-bridge` → `doctor`. Cheapest adoption _and_ dogfooding unlock.                                                                                                                                                                                                                                                                                           | S      | planned             |
+| 4   | **`kpm remove <name>`**                         | The one glaring lifecycle gap — `add` exists, `remove` does not. Drop the direct dep from `knowledge.json` → re-resolve → rewrite `knowledge.lock` → rehydrate `knowledge_modules` → ensure `compose` prunes the removed package.                                                                                                                                                                                                                                                                                                                           | S      | 🚧 in flight        |
+| 5   | **`kpm list`**                                  | Make lockfile state legible without opening JSON: show direct + transitive packages with versions, source specs, pinned refs, and overridden specs.                                                                                                                                                                                                                                                                                                                                                                                                         | S      | planned             |
+| 6   | **`kpm outdated` + `kpm update [name\|--all]`** | Fills the deliberate "semver frozen at `add`" hole _explicitly and opt-in_. Reuses existing semver resolution + the original `#semver:` range stored in the lock. Make mutable-branch behavior explicit; keep ordinary `install` lockfile-only and deterministic.                                                                                                                                                                                                                                                                                           | M      | 🚧 partly in flight |
+| 7   | **Stabilization & honesty pass**                | Make `add` atomic (resolution failure must not leave `knowledge.json` edited while lock/modules go stale); dedupe materialization of the package being added; reuse the tarball cache for reads, not just writes; fix `compose` pruning (including the empty-install case and scoped/unscoped dirs); fix misleading `doctor` lockfile-refresh guidance (point at the command that re-resolves); decide `audit.enabled` (wire it in or drop it from generated config); add CLI error-path tests (missing args, unknown commands/flags, doctor/audit output). | M      | planned             |
 
 **Exit criteria**
 
@@ -151,17 +151,17 @@ make kpm feel like a coherent small package manager._
 _Goal: ship the agent-facing primitives Track B depends on, and help people
 **create** good packages, not just consume them._
 
-| # | Item | Why | Effort |
-|---|------|-----|--------|
-| 1 | **`kpm serve` — read-only MCP server** | The differentiating "both" slice: expose the composed vault as MCP resources/tools (list packages, read note, follow link, get index/bridges). Local, no infra — a natural extension of `describe`. **The foundation Track B builds on.** | M |
-| 2 | **Server-less discovery convention** | Make packages *findable* with no registry: standard GitHub topics (`kpm-package`, `knowledge-package`, `obsidian`, `markdown`) + a curated `awesome-kpm` index repo; optional `kpm search` over the GitHub topic API. | S–M |
-| 3 | **`kpm graph` export** | Emit the dependency + wikilink graph (JSON / Mermaid); highlight singleton overrides and conflicts. Cheap DX win that feeds editor integrations later. | S–M |
-| 4 | **Authoring & trust workflows** | `kpm init --package` templates (starter README, recommended layout, wikilink guidance); `kpm doctor --publish` (entrypoint inclusion, reject mutable refs, validate globs + generated-file boundaries, report unsafe/ambiguous wikilinks); expand `kpm audit` (hidden files, unexpected extensions, large/binary-ish files, symlink behavior, optional allowlist); strengthen bridge validation (verify generated bridge files *after* adapter execution, protect user-authored notes from overwrite). | M–L |
-| 5 | **More sources** | Generalize sources beyond GitHub: `git+https` / `git+ssh`, GitLab, plain HTTPS tarball. | M |
-| 6 | **Export adapters (pluggable outputs)** | Beyond Obsidian: Logseq, MkDocs/Docusaurus, plain Markdown — by abstracting the **link format** in the already-centralized wikilink/resolve layer. _(This is a link-rewriting adapter, **not** a hosted site generator — see Non-goals.)_ | M |
-| 7 | **Smarter, incremental synthesis** | Content-address the bridge so unchanged sources skip regeneration; `compose --dry-run` to preview LLM changes before writing; optional per-package summaries. | M–L |
-| 8 | **Watch mode** | `compose --watch` recomposes on change — a big authoring-DX win. | M |
-| 9 | **Query / retrieval layer** ("ask the vault") | `kpm search` + an MCP `search` tool over a **local** embedding/keyword index cached in `.kpm/`. The capstone where kpm stops being a file-copier — and **the index Track B's retrieval stands on.** | L |
+| #   | Item                                          | Why                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Effort |
+| --- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| 1   | **`kpm serve` — read-only MCP server**        | The differentiating "both" slice: expose the composed vault as MCP resources/tools (list packages, read note, follow link, get index/bridges). Local, no infra — a natural extension of `describe`. **The foundation Track B builds on.**                                                                                                                                                                                                                                                              | M      |
+| 2   | **Server-less discovery convention**          | Make packages _findable_ with no registry: standard GitHub topics (`kpm-package`, `knowledge-package`, `obsidian`, `markdown`) + a curated `awesome-kpm` index repo; optional `kpm search` over the GitHub topic API.                                                                                                                                                                                                                                                                                  | S–M    |
+| 3   | **`kpm graph` export**                        | Emit the dependency + wikilink graph (JSON / Mermaid); highlight singleton overrides and conflicts. Cheap DX win that feeds editor integrations later.                                                                                                                                                                                                                                                                                                                                                 | S–M    |
+| 4   | **Authoring & trust workflows**               | `kpm init --package` templates (starter README, recommended layout, wikilink guidance); `kpm doctor --publish` (entrypoint inclusion, reject mutable refs, validate globs + generated-file boundaries, report unsafe/ambiguous wikilinks); expand `kpm audit` (hidden files, unexpected extensions, large/binary-ish files, symlink behavior, optional allowlist); strengthen bridge validation (verify generated bridge files _after_ adapter execution, protect user-authored notes from overwrite). | M–L    |
+| 5   | **More sources**                              | Generalize sources beyond GitHub: `git+https` / `git+ssh`, GitLab, plain HTTPS tarball.                                                                                                                                                                                                                                                                                                                                                                                                                | M      |
+| 6   | **Export adapters (pluggable outputs)**       | Beyond Obsidian: Logseq, MkDocs/Docusaurus, plain Markdown — by abstracting the **link format** in the already-centralized wikilink/resolve layer. _(This is a link-rewriting adapter, **not** a hosted site generator — see Non-goals.)_                                                                                                                                                                                                                                                              | M      |
+| 7   | **Smarter, incremental synthesis**            | Content-address the bridge so unchanged sources skip regeneration; `compose --dry-run` to preview LLM changes before writing; optional per-package summaries.                                                                                                                                                                                                                                                                                                                                          | M–L    |
+| 8   | **Watch mode**                                | `compose --watch` recomposes on change — a big authoring-DX win.                                                                                                                                                                                                                                                                                                                                                                                                                                       | M      |
+| 9   | **Query / retrieval layer** ("ask the vault") | `kpm search` + an MCP `search` tool over a **local** embedding/keyword index cached in `.kpm/`. The capstone where kpm stops being a file-copier — and **the index Track B's retrieval stands on.**                                                                                                                                                                                                                                                                                                    | L      |
 
 **Exit criteria**
 
@@ -175,14 +175,14 @@ _Goal: ship the agent-facing primitives Track B depends on, and help people
 
 ## LATER — ambitious / higher-infra / community-dependent
 
-| Item | Note |
-|------|------|
-| **Hosted registry + `kpm publish`** | The thing the solo constraint says *not* to build alone. Bridge until then = the NEXT discovery convention; could start as a static Git-hosted index before any server. Build only once GitHub-native distribution shows real demand. |
-| **Signing & provenance** | Sigstore-style signing/verification + SBOM for knowledge graphs. |
-| **Editor integrations** | Obsidian plugin / VS Code extension running `compose` / `doctor` / `serve` in-editor. |
-| **Vault importer** | `kpm init --from <obsidian-vault>`: split an existing vault into packages, infer deps from links. |
-| **Resolution beyond singleton** | Opt-in namespaced coexistence of conflicting versions + smarter conflict diagnostics. Singleton-by-name stays the **default**. |
-| **Collaboration / living knowledge** | Proposals/review against packages, update notifications. _Exploratory_ — in tension with the immutability thesis, and flagged as such. |
+| Item                                 | Note                                                                                                                                                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Hosted registry + `kpm publish`**  | The thing the solo constraint says _not_ to build alone. Bridge until then = the NEXT discovery convention; could start as a static Git-hosted index before any server. Build only once GitHub-native distribution shows real demand. |
+| **Signing & provenance**             | Sigstore-style signing/verification + SBOM for knowledge graphs.                                                                                                                                                                      |
+| **Editor integrations**              | Obsidian plugin / VS Code extension running `compose` / `doctor` / `serve` in-editor.                                                                                                                                                 |
+| **Vault importer**                   | `kpm init --from <obsidian-vault>`: split an existing vault into packages, infer deps from links.                                                                                                                                     |
+| **Resolution beyond singleton**      | Opt-in namespaced coexistence of conflicting versions + smarter conflict diagnostics. Singleton-by-name stays the **default**.                                                                                                        |
+| **Collaboration / living knowledge** | Proposals/review against packages, update notifications. _Exploratory_ — in tension with the immutability thesis, and flagged as such.                                                                                                |
 
 ---
 
@@ -198,7 +198,7 @@ at the core, model-free._
 >
 > **Model boundary (invariant #1 preserved):** kpm's retrieval and context
 > primitives are deterministic and **never call a model**. The example agents and
-> the eval harness *do* call models, but they are opt-in and live outside the
+> the eval harness _do_ call models, but they are opt-in and live outside the
 > core (in `examples/` and a clearly separated surface). The substrate stays
 > reproducible.
 
@@ -209,12 +209,12 @@ _All Track B items are **planned** (none in flight yet)._
 _Goal: let an agent actually ask a vault a question and get cited, budget-aware
 context back._
 
-| # | Item | Why | Effort |
-|---|------|-----|--------|
-| 1 | **Deep MCP tool surface** | Turn `serve` from read-only resources into a real agent *toolset*: `search`, `get_note`, `follow_links`, `get_neighbors`, `get_index` / `get_bridges`, `describe_package`. The minimum for an agent to *navigate* a vault, not just read files. _(Integration)_ | M |
-| 2 | **Grounded retrieval with citations** | Every retrieval result carries provenance — `note → package@version` — and supports graph-aware expansion along `[[wikilinks]]`. Lets agents cite sources and reason over neighborhoods, not isolated chunks. _(Retrieval)_ | M |
-| 3 | **Context-budget packing** | `kpm context <query> --budget <tokens>` + an SDK function returning a token-bounded, relevance-ranked, citation-tagged context bundle with progressive disclosure (summary → detail). The core "inject the right knowledge into an agent" primitive. _(Context)_ | M |
-| 4 | **Thin SDK (v0)** | A small published library wrapping load-vault / search / pack-context / cite, so any agent runtime can mount a composed kpm vault as a knowledge source in a few lines. Deterministic, model-free. _(Integration)_ | M |
+| #   | Item                                  | Why                                                                                                                                                                                                                                                              | Effort |
+| --- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1   | **Deep MCP tool surface**             | Turn `serve` from read-only resources into a real agent _toolset_: `search`, `get_note`, `follow_links`, `get_neighbors`, `get_index` / `get_bridges`, `describe_package`. The minimum for an agent to _navigate_ a vault, not just read files. _(Integration)_  | M      |
+| 2   | **Grounded retrieval with citations** | Every retrieval result carries provenance — `note → package@version` — and supports graph-aware expansion along `[[wikilinks]]`. Lets agents cite sources and reason over neighborhoods, not isolated chunks. _(Retrieval)_                                      | M      |
+| 3   | **Context-budget packing**            | `kpm context <query> --budget <tokens>` + an SDK function returning a token-bounded, relevance-ranked, citation-tagged context bundle with progressive disclosure (summary → detail). The core "inject the right knowledge into an agent" primitive. _(Context)_ | M      |
+| 4   | **Thin SDK (v0)**                     | A small published library wrapping load-vault / search / pack-context / cite, so any agent runtime can mount a composed kpm vault as a knowledge source in a few lines. Deterministic, model-free. _(Integration)_                                               | M      |
 
 **Exit criteria**
 
@@ -228,14 +228,14 @@ context back._
 _Goal: meet agents where they live, prove the knowledge helps, and keep it
 trustworthy._
 
-| # | Item | Why | Effort |
-|---|------|-----|--------|
-| 1 | **Agent-framework adapters** | A Claude Agent SDK skill/tool plus LangChain / LlamaIndex retriever adapters over the SDK. Meet agents where they already are. _(Integration)_ | M |
-| 2 | **Grounded Q&A reference agent** | A runnable example agent in `examples/` that answers questions over a vault with inline citations. Dogfoods the SDK and doubles as the canonical tutorial. _(Workflows)_ | M |
-| 3 | **Vault-maintainer agent** | Detects stale, orphaned, or contradictory notes and **proposes** updates as diffs/PRs — never silently writes. Pairs with Track A `doctor`. _(Workflows)_ | M–L |
-| 4 | **Eval harness — `kpm eval`** | Given a task set + a vault, measure whether providing vault context improves an agent's task success vs. a no-context baseline; add grounding/faithfulness checks (does each claim trace to a cited note?). Answers the core question: *does this knowledge actually help?* _(Evaluation)_ | L |
-| 5 | **Retrieval ranking quality** | Hybrid ranking (keyword + embedding + graph centrality), neighborhood-expansion tuning, cross-package dedup. Raises answer quality once the plumbing works. _(Retrieval)_ | M–L |
-| 6 | **Local usage telemetry (opt-in)** | Record which notes/packages agents actually pull (local-only, no infra) to inform pruning, authoring, and ranking. _(Evaluation / trust)_ | M |
+| #   | Item                               | Why                                                                                                                                                                                                                                                                                        | Effort |
+| --- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| 1   | **Agent-framework adapters**       | A Claude Agent SDK skill/tool plus LangChain / LlamaIndex retriever adapters over the SDK. Meet agents where they already are. _(Integration)_                                                                                                                                             | M      |
+| 2   | **Grounded Q&A reference agent**   | A runnable example agent in `examples/` that answers questions over a vault with inline citations. Dogfoods the SDK and doubles as the canonical tutorial. _(Workflows)_                                                                                                                   | M      |
+| 3   | **Vault-maintainer agent**         | Detects stale, orphaned, or contradictory notes and **proposes** updates as diffs/PRs — never silently writes. Pairs with Track A `doctor`. _(Workflows)_                                                                                                                                  | M–L    |
+| 4   | **Eval harness — `kpm eval`**      | Given a task set + a vault, measure whether providing vault context improves an agent's task success vs. a no-context baseline; add grounding/faithfulness checks (does each claim trace to a cited note?). Answers the core question: _does this knowledge actually help?_ _(Evaluation)_ | L      |
+| 5   | **Retrieval ranking quality**      | Hybrid ranking (keyword + embedding + graph centrality), neighborhood-expansion tuning, cross-package dedup. Raises answer quality once the plumbing works. _(Retrieval)_                                                                                                                  | M–L    |
+| 6   | **Local usage telemetry (opt-in)** | Record which notes/packages agents actually pull (local-only, no infra) to inform pruning, authoring, and ranking. _(Evaluation / trust)_                                                                                                                                                  | M      |
 
 **Exit criteria**
 
@@ -246,13 +246,13 @@ trustworthy._
 
 ## LATER — write-path, multi-agent, federation
 
-| Item | Note |
-|------|------|
+| Item                                       | Note                                                                                                                                                                                |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Agent write-back / knowledge proposals** | Agents draft new notes or updates as reviewable package proposals (PRs against source repos). Strong tension with the immutability thesis — opt-in, flagged, **never auto-merged**. |
-| **Multi-agent shared memory** | A team of agents sharing one composed vault as common ground, with per-agent context views. |
-| **Hosted retrieval endpoint** | If/when a hosted registry exists (Track A Later), an optional hosted query/serve endpoint. Server-less stays the **default**. |
-| **Cross-vault federation** | Query and cite across multiple installed vaults / orgs. |
-| **Learned relevance** | Feedback-driven ranking trained on eval + telemetry signals. |
+| **Multi-agent shared memory**              | A team of agents sharing one composed vault as common ground, with per-agent context views.                                                                                         |
+| **Hosted retrieval endpoint**              | If/when a hosted registry exists (Track A Later), an optional hosted query/serve endpoint. Server-less stays the **default**.                                                       |
+| **Cross-vault federation**                 | Query and cite across multiple installed vaults / orgs.                                                                                                                             |
+| **Learned relevance**                      | Feedback-driven ranking trained on eval + telemetry signals.                                                                                                                        |
 
 ---
 
