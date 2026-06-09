@@ -38,10 +38,20 @@ describe("extractTarball", () => {
   it("rejects archives containing path-escaping entries", async () => {
     const work = await mkdtemp(join(tmpdir(), "kpm-evil-"));
     const archive = join(work, "evil.tgz");
-    await writeMaliciousTarball(archive);
+    await writeMaliciousTarball(archive, "../escape.md");
     const dest = await mkdtemp(join(tmpdir(), "kpm-extract-"));
     await expect(extractTarball(archive, dest)).rejects.toThrow(/unsafe path/);
     await expect(readFile(join(dest, "..", "escape.md"), "utf8")).rejects.toThrow();
+  });
+
+  it("rejects archives containing absolute-path entries", async () => {
+    const work = await mkdtemp(join(tmpdir(), "kpm-evil-abs-"));
+    const archive = join(work, "evil.tgz");
+    const escapeTarget = join(work, "escape.md");
+    await writeMaliciousTarball(archive, escapeTarget);
+    const dest = await mkdtemp(join(tmpdir(), "kpm-extract-"));
+    await expect(extractTarball(archive, dest)).rejects.toThrow(/unsafe path/);
+    await expect(readFile(escapeTarget, "utf8")).rejects.toThrow();
   });
 
   it("materializes file:// sources by returning the package directory", async () => {
@@ -131,9 +141,9 @@ function restoreEnv(key: string, value: string | undefined): void {
   }
 }
 
-async function writeMaliciousTarball(path: string): Promise<void> {
+async function writeMaliciousTarball(path: string, entryName: string): Promise<void> {
   const body = Buffer.from("escape\n");
-  const header = tarHeader("../escape.md", body.length);
+  const header = tarHeader(entryName, body.length);
   const end = Buffer.alloc(1024);
   const archive = Buffer.concat([header, body, Buffer.alloc(512 - body.length), end]);
   await writeFile(path, await gzipAsync(archive));

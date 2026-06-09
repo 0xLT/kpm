@@ -167,6 +167,14 @@ async function writeAndExtractTarball(bytes: Buffer, tmpLabel: string): Promise<
   return extractTarball(archive, join(work, "extract"));
 }
 
+/**
+ * Extract `archive` into `dest` and return its single top-level directory.
+ *
+ * Every entry is confined to `dest`: absolute paths, `..` segments, and any
+ * path that resolves outside the destination are rejected. Containment is
+ * always enforced against `dest` itself; there is intentionally no override to
+ * widen or narrow that boundary.
+ */
 export async function extractTarball(archive: string, dest: string): Promise<string> {
   const root = resolve(dest);
   await mkdir(root, { recursive: true });
