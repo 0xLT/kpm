@@ -58,16 +58,16 @@
     "unist-util-visit": "^5.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.1",
     "@types/picomatch": "^4.0.0",
     "@types/semver": "^7.7.0",
     "@types/tar": "^7.0.87",
-    "eslint": "^9.39.4",
-    "eslint-config-prettier": "^9.1.2",
-    "prettier": "^3.8.3",
+    "eslint": "^10.4.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.60.0",
+    "typescript-eslint": "^8.61.0",
     "vitest": "^4.1.8",
     "yaml": "^2.9.0"
   }
